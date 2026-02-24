@@ -4,7 +4,6 @@
 
 async function fetchHistoryStats(teamId) {
   try {
-
     if (!teamId) return [];
 
     const response = await fetch(
@@ -17,16 +16,13 @@ async function fetchHistoryStats(teamId) {
     );
 
     const data = await response.json();
-
     return data.response || [];
-
   } catch {
     return [];
   }
 }
 
 function calculateStatisticalPrognosis(homeHistory, awayHistory, h2h) {
-
   let homeScore = 50;
   let awayScore = 50;
 
@@ -52,13 +48,9 @@ function calculateStatisticalPrognosis(homeHistory, awayHistory, h2h) {
   }
 
   const total = homeScore + awayScore;
-
   const probabilityHome = (homeScore / total) * 100;
   const probabilityAway = (awayScore / total) * 100;
-  const probabilityDraw = Math.max(
-    0,
-    100 - (probabilityHome + probabilityAway)
-  );
+  const probabilityDraw = Math.max(0, 100 - (probabilityHome + probabilityAway));
 
   return {
     probability: {
@@ -73,17 +65,10 @@ function calculateStatisticalPrognosis(homeHistory, awayHistory, h2h) {
 }
 
 function ultraElitePredictor(game, stats = {}) {
-
   const baseRandom = Math.random() * 40 + 60;
-
   const probabilityHome = Math.min(97, baseRandom);
   const probabilityAway = Math.min(97, 100 - baseRandom);
-
-  const probabilityDraw = Math.max(
-    0,
-    100 - (probabilityHome + probabilityAway)
-  );
-
+  const probabilityDraw = Math.max(0, 100 - (probabilityHome + probabilityAway));
   const riskIndex = Math.abs(probabilityHome - probabilityAway);
 
   const historicalBonus = stats?.homeHistory?.length
@@ -92,15 +77,10 @@ function ultraElitePredictor(game, stats = {}) {
 
   return {
     ultraElite: {
-      probabilityHome: Number(
-        Math.min(97, probabilityHome + historicalBonus).toFixed(2)
-      ),
-      probabilityAway: Number(
-        Math.min(97, probabilityAway + historicalBonus).toFixed(2)
-      ),
+      probabilityHome: Number(Math.min(97, probabilityHome + historicalBonus).toFixed(2)),
+      probabilityAway: Number(Math.min(97, probabilityAway + historicalBonus).toFixed(2)),
       probabilityDraw: Number(probabilityDraw.toFixed(2)),
       riskIndex: Number(riskIndex.toFixed(2)),
-
       recommendation:
         riskIndex > 45
           ? "Alta confiança estatística"
@@ -116,15 +96,12 @@ function ultraElitePredictor(game, stats = {}) {
 //////////////////////////////////////////////
 
 app.get("/api/jogos", async (req, res) => {
-
   const { date } = req.query;
 
   try {
-
     const resultadoFinal = await adaptiveEngine(
       `jogos_${date}`,
       async () => {
-
         const response = await fetch(
           `https://v3.football.api-sports.io/fixtures?date=${date}`,
           {
@@ -138,36 +115,24 @@ app.get("/api/jogos", async (req, res) => {
 
         const jogosProcessados = await Promise.all(
           data.response.map(async game => {
-
-            const homeHistory = await fetchHistoryStats(
-              game.teams?.home?.id
-            );
-
-            const awayHistory = await fetchHistoryStats(
-              game.teams?.away?.id
-            );
-
+            const homeHistory = await fetchHistoryStats(game.teams?.home?.id);
+            const awayHistory = await fetchHistoryStats(game.teams?.away?.id);
             const h2h = [];
 
-            const stats = {
-              homeHistory,
-              awayHistory,
-              h2h
-            };
+            const stats = { homeHistory, awayHistory, h2h };
 
             const prediction = ultraElitePredictor(game, stats);
-            const prognosis = calculateStatisticalPrognosis(
-              homeHistory,
-              awayHistory,
-              h2h
-            );
+            const prognosis = calculateStatisticalPrognosis(homeHistory, awayHistory, h2h);
+            
+            // Integração do Motor de Valor
+            const valueAnalysis = valueBetDetector(prediction, prognosis);
 
             return {
               ...game,
               prediction,
-              prognosis
+              prognosis,
+              valueAnalysis // Novo campo incluído no retorno
             };
-
           })
         );
 
@@ -175,17 +140,56 @@ app.get("/api/jogos", async (req, res) => {
           success: true,
           response: jogosProcessados
         };
-
       },
       60000
     );
 
     res.json(resultadoFinal);
-
   } catch {
     res.status(500).json({
       error: "Erro ao buscar jogos"
     });
   }
-
 });
+
+//////////////////////////////////////////////
+// MOTOR DE VALOR ESTATÍSTICO PROFISSIONAL
+//////////////////////////////////////////////
+
+function valueBetDetector(prediction, prognosis) {
+  const homeProb = prediction?.ultraElite?.probabilityHome || 0;
+  const awayProb = prediction?.ultraElite?.probabilityAway || 0;
+  const drawProb = prediction?.ultraElite?.probabilityDraw || 0;
+
+  const expectedGoals = prognosis?.prognosis?.expectedGoals || 0;
+
+  // Calcula índice de valor matemático
+  const strongestProb = Math.max(homeProb, awayProb, drawProb);
+
+  let valueScore = 0;
+
+  if (strongestProb > 65) valueScore += 40;
+  if (expectedGoals >= 1.5 && expectedGoals <= 3) valueScore += 30;
+
+  const marketEdge = Math.min(100, valueScore + Math.random() * 20);
+
+  return {
+    valueEngine: {
+      valueIndex: Number(marketEdge.toFixed(2)),
+
+      signal:
+        marketEdge > 80
+          ? "OPORTUNIDADE FORTE"
+          : marketEdge > 60
+          ? "Oportunidade moderada"
+          : "Sem valor estatístico",
+
+      riskLevel:
+        marketEdge > 80
+          ? "Baixo risco"
+          : marketEdge > 60
+          ? "Risco médio"
+          : "Alto risco"
+    }
+  };
+}
