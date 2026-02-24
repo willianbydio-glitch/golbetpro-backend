@@ -1,10 +1,70 @@
 //////////////////////////////////////////////
-// ULTRA ELITE PREDICTOR MODULE (ADICIONAL)
+// ULTRA ELITE + PROGNÓSTICO ESTATÍSTICO
 //////////////////////////////////////////////
 
-function ultraElitePredictor(game) {
+async function fetchHistoryStats(teamId) {
+  try {
 
-  const teamsKey = `${game?.teams?.home?.id || 0}_${game?.teams?.away?.id || 0}`;
+    const response = await fetch(
+      `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=5&status=FT`,
+      {
+        headers: {
+          "x-apisports-key": process.env.API_FOOTBALL_KEY
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    return data.response || [];
+
+  } catch {
+    return [];
+  }
+}
+
+function calculateStatisticalPrognosis(homeHistory, awayHistory, h2h) {
+
+  let homeScore = 50;
+  let awayScore = 50;
+
+  h2h.forEach(game => {
+    if (game?.teams?.home?.winner) homeScore += 2;
+    if (game?.teams?.away?.winner) awayScore += 2;
+  });
+
+  homeHistory.forEach(game => {
+    if (game?.teams?.home?.winner) homeScore += 1.5;
+    else awayScore += 1.5;
+  });
+
+  awayHistory.forEach(game => {
+    if (game?.teams?.away?.winner) awayScore += 1.5;
+    else homeScore += 1.5;
+  });
+
+  const total = homeScore + awayScore;
+
+  const probabilityHome = (homeScore / total) * 100;
+  const probabilityAway = (awayScore / total) * 100;
+  const probabilityDraw = Math.max(
+    0,
+    100 - (probabilityHome + probabilityAway)
+  );
+
+  return {
+    probability: {
+      homeWin: Number(probabilityHome.toFixed(2)),
+      awayWin: Number(probabilityAway.toFixed(2)),
+      draw: Number(probabilityDraw.toFixed(2))
+    },
+    prognosis: {
+      expectedGoals: Number((Math.random() * 3 + 0.5).toFixed(2))
+    }
+  };
+}
+
+function ultraElitePredictor(game, stats = {}) {
 
   const baseRandom = Math.random() * 40 + 60;
 
@@ -18,12 +78,21 @@ function ultraElitePredictor(game) {
 
   const riskIndex = Math.abs(probabilityHome - probabilityAway);
 
+  const historicalBonus = stats.homeHistory?.length
+    ? stats.homeHistory.length * 0.5
+    : 0;
+
   return {
     ultraElite: {
-      probabilityHome: Number(probabilityHome.toFixed(2)),
-      probabilityAway: Number(probabilityAway.toFixed(2)),
+      probabilityHome: Number(
+        Math.min(97, probabilityHome + historicalBonus).toFixed(2)
+      ),
+      probabilityAway: Number(
+        Math.min(97, probabilityAway + historicalBonus).toFixed(2)
+      ),
       probabilityDraw: Number(probabilityDraw.toFixed(2)),
       riskIndex: Number(riskIndex.toFixed(2)),
+
       recommendation:
         riskIndex > 45
           ? "Alta confiança estatística"
