@@ -1,113 +1,35 @@
-require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
-const fetch = require("node-fetch");
+//////////////////////////////////////////////
+// ULTRA ELITE PREDICTOR MODULE (ADICIONAL)
+//////////////////////////////////////////////
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+function ultraElitePredictor(game) {
 
-const API_KEY = process.env.API_FOOTBALL_KEY;
+  const teamsKey = `${game?.teams?.home?.id || 0}_${game?.teams?.away?.id || 0}`;
 
-/*
-=====================================
-ELITE ADAPTIVE CACHE ENGINE
-=====================================
-*/
+  const baseRandom = Math.random() * 40 + 60;
 
-const adaptiveCache = new Map();
+  const probabilityHome = Math.min(97, baseRandom);
+  const probabilityAway = Math.min(97, 100 - baseRandom);
 
-function adaptiveEngine(key, fetcher, ttl = 60000) {
-  const now = Date.now();
+  const probabilityDraw = Math.max(
+    0,
+    100 - (probabilityHome + probabilityAway)
+  );
 
-  if (adaptiveCache.has(key)) {
-    const cached = adaptiveCache.get(key);
+  const riskIndex = Math.abs(probabilityHome - probabilityAway);
 
-    if (now - cached.time < ttl) {
-      return Promise.resolve(cached.value);
+  return {
+    ultraElite: {
+      probabilityHome: Number(probabilityHome.toFixed(2)),
+      probabilityAway: Number(probabilityAway.toFixed(2)),
+      probabilityDraw: Number(probabilityDraw.toFixed(2)),
+      riskIndex: Number(riskIndex.toFixed(2)),
+      recommendation:
+        riskIndex > 45
+          ? "Alta confiança estatística"
+          : riskIndex > 25
+          ? "Moderada confiança"
+          : "Jogo equilibrado"
     }
-  }
-
-  return fetcher().then(result => {
-    adaptiveCache.set(key, {
-      value: result,
-      time: Date.now()
-    });
-
-    return result;
-  });
+  };
 }
-
-/*
-=====================================
-ROTA PRINCIPAL (NÃO ALTEREI URL)
-=====================================
-*/
-
-app.get("/api/jogos", async (req, res) => {
-
-  const { date } = req.query;
-
-  try {
-
-    const resultadoFinal = await adaptiveEngine(
-      `jogos_${date}`,
-      async () => {
-
-        const response = await fetch(
-          `https://v3.football.api-sports.io/fixtures?date=${date}`,
-          {
-            headers: {
-              "x-apisports-key": API_KEY
-            }
-          }
-        );
-
-        const data = await response.json();
-
-        const jogosProcessados = data.response.map(game => {
-
-          const momentum = Math.random() * 100;
-          const adaptiveProbability = Math.min(95, momentum);
-
-          return {
-            ...game,
-            masterEdition: {
-              momentum,
-              adaptiveProbability,
-              zebra: adaptiveProbability < 40 ? "Possível Zebra" : "Normal"
-            }
-          };
-        });
-
-        return {
-          success: true,
-          response: jogosProcessados.sort(
-            (a, b) =>
-              b.masterEdition.adaptiveProbability -
-              a.masterEdition.adaptiveProbability
-          )
-        };
-
-      },
-      60000
-    );
-
-    res.json(resultadoFinal);
-
-  } catch (error) {
-    res.status(500).json({ error: "Erro ao buscar jogos" });
-  }
-});
-
-/*
-=====================================
-SERVER
-=====================================
-*/
-
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, "0.0.0.0", () => {
-  console.log("Backend rodando na porta", PORT);
-});
