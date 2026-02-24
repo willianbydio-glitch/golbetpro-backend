@@ -9,60 +9,89 @@ app.use(express.json());
 
 const API_KEY = process.env.API_FOOTBALL_KEY;
 
-let cache = {
-  data: null,
-  timestamp: 0
-};
+/*
+=====================================
+ELITE ADAPTIVE CACHE ENGINE
+=====================================
+*/
 
-const CACHE_TIME = 60 * 1000;
+const adaptiveCache = new Map();
+
+function adaptiveEngine(key, fetcher, ttl = 60000) {
+  const now = Date.now();
+
+  if (adaptiveCache.has(key)) {
+    const cached = adaptiveCache.get(key);
+
+    if (now - cached.time < ttl) {
+      return Promise.resolve(cached.value);
+    }
+  }
+
+  return fetcher().then(result => {
+    adaptiveCache.set(key, {
+      value: result,
+      time: Date.now()
+    });
+
+    return result;
+  });
+}
+
+/*
+=====================================
+ROTA PRINCIPAL (NÃO ALTEREI URL)
+=====================================
+*/
 
 app.get("/api/jogos", async (req, res) => {
 
   const { date } = req.query;
 
-  if (cache.data && Date.now() - cache.timestamp < CACHE_TIME) {
-    return res.json(cache.data);
-  }
-
   try {
 
-    const response = await fetch(
-      `https://v3.football.api-sports.io/fixtures?date=${date}`,
-      {
-        headers: {
-          "x-apisports-key": API_KEY
-        }
-      }
+    const resultadoFinal = await adaptiveEngine(
+      `jogos_${date}`,
+      async () => {
+
+        const response = await fetch(
+          `https://v3.football.api-sports.io/fixtures?date=${date}`,
+          {
+            headers: {
+              "x-apisports-key": API_KEY
+            }
+          }
+        );
+
+        const data = await response.json();
+
+        const jogosProcessados = data.response.map(game => {
+
+          const momentum = Math.random() * 100;
+          const adaptiveProbability = Math.min(95, momentum);
+
+          return {
+            ...game,
+            masterEdition: {
+              momentum,
+              adaptiveProbability,
+              zebra: adaptiveProbability < 40 ? "Possível Zebra" : "Normal"
+            }
+          };
+        });
+
+        return {
+          success: true,
+          response: jogosProcessados.sort(
+            (a, b) =>
+              b.masterEdition.adaptiveProbability -
+              a.masterEdition.adaptiveProbability
+          )
+        };
+
+      },
+      60000
     );
-
-    const data = await response.json();
-
-    const jogosProcessados = data.response.map(game => {
-
-      const momentum = Math.random() * 100;
-      const adaptiveProbability = Math.min(95, momentum);
-
-      return {
-        ...game,
-        masterEdition: {
-          momentum,
-          adaptiveProbability,
-          zebra: adaptiveProbability < 40 ? "Possível Zebra" : "Normal"
-        }
-      };
-    });
-
-    const resultadoFinal = {
-      success: true,
-      response: jogosProcessados.sort(
-        (a, b) =>
-          b.masterEdition.adaptiveProbability -
-          a.masterEdition.adaptiveProbability
-      )
-    };
-
-    cache.data = resultadoFinal;
-    cache.timestamp = Date.now();
 
     res.json(resultadoFinal);
 
@@ -70,6 +99,12 @@ app.get("/api/jogos", async (req, res) => {
     res.status(500).json({ error: "Erro ao buscar jogos" });
   }
 });
+
+/*
+=====================================
+SERVER
+=====================================
+*/
 
 const PORT = process.env.PORT || 3000;
 
