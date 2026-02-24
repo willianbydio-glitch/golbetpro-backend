@@ -5,6 +5,8 @@
 async function fetchHistoryStats(teamId) {
   try {
 
+    if (!teamId) return [];
+
     const response = await fetch(
       `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=5&status=FT`,
       {
@@ -28,20 +30,26 @@ function calculateStatisticalPrognosis(homeHistory, awayHistory, h2h) {
   let homeScore = 50;
   let awayScore = 50;
 
-  h2h.forEach(game => {
-    if (game?.teams?.home?.winner) homeScore += 2;
-    if (game?.teams?.away?.winner) awayScore += 2;
-  });
+  if (Array.isArray(h2h)) {
+    h2h.forEach(game => {
+      if (game?.teams?.home?.winner) homeScore += 2;
+      if (game?.teams?.away?.winner) awayScore += 2;
+    });
+  }
 
-  homeHistory.forEach(game => {
-    if (game?.teams?.home?.winner) homeScore += 1.5;
-    else awayScore += 1.5;
-  });
+  if (Array.isArray(homeHistory)) {
+    homeHistory.forEach(game => {
+      if (game?.teams?.home?.winner) homeScore += 1.5;
+      else awayScore += 1.5;
+    });
+  }
 
-  awayHistory.forEach(game => {
-    if (game?.teams?.away?.winner) awayScore += 1.5;
-    else homeScore += 1.5;
-  });
+  if (Array.isArray(awayHistory)) {
+    awayHistory.forEach(game => {
+      if (game?.teams?.away?.winner) awayScore += 1.5;
+      else homeScore += 1.5;
+    });
+  }
 
   const total = homeScore + awayScore;
 
@@ -78,7 +86,7 @@ function ultraElitePredictor(game, stats = {}) {
 
   const riskIndex = Math.abs(probabilityHome - probabilityAway);
 
-  const historicalBonus = stats.homeHistory?.length
+  const historicalBonus = stats?.homeHistory?.length
     ? stats.homeHistory.length * 0.5
     : 0;
 
