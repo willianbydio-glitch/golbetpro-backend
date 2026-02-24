@@ -110,3 +110,82 @@ function ultraElitePredictor(game, stats = {}) {
     }
   };
 }
+
+//////////////////////////////////////////////
+// ENDPOINT PRINCIPAL
+//////////////////////////////////////////////
+
+app.get("/api/jogos", async (req, res) => {
+
+  const { date } = req.query;
+
+  try {
+
+    const resultadoFinal = await adaptiveEngine(
+      `jogos_${date}`,
+      async () => {
+
+        const response = await fetch(
+          `https://v3.football.api-sports.io/fixtures?date=${date}`,
+          {
+            headers: {
+              "x-apisports-key": process.env.API_FOOTBALL_KEY
+            }
+          }
+        );
+
+        const data = await response.json();
+
+        const jogosProcessados = await Promise.all(
+          data.response.map(async game => {
+
+            const homeHistory = await fetchHistoryStats(
+              game.teams?.home?.id
+            );
+
+            const awayHistory = await fetchHistoryStats(
+              game.teams?.away?.id
+            );
+
+            const h2h = [];
+
+            const stats = {
+              homeHistory,
+              awayHistory,
+              h2h
+            };
+
+            const prediction = ultraElitePredictor(game, stats);
+            const prognosis = calculateStatisticalPrognosis(
+              homeHistory,
+              awayHistory,
+              h2h
+            );
+
+            return {
+              ...game,
+              prediction,
+              prognosis
+            };
+
+          })
+        );
+
+        return {
+          success: true,
+          response: jogosProcessados
+        };
+
+      },
+      60000
+    );
+
+    res.json(resultadoFinal);
+
+  } catch {
+    res.status(500).json({
+      error: "Erro ao buscar jogos"
+    });
+  }
+
+});
