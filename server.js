@@ -7,12 +7,38 @@ const app = express();
 app.use(express.json());
 
 //////////////////////////////////////////////
-// ULTRA ELITE + PROGNÓSTICO ESTATÍSTICO
+// CACHE ADAPTATIVO (CORREÇÃO 4)
+//////////////////////////////////////////////
+
+const cache = new Map();
+
+async function adaptiveEngine(key, callback, ttl = 60000) {
+  const now = Date.now();
+
+  if (cache.has(key)) {
+    const cached = cache.get(key);
+
+    if (now - cached.timestamp < ttl) {
+      return cached.data;
+    }
+  }
+
+  const data = await callback();
+
+  cache.set(key, {
+    data,
+    timestamp: now
+  });
+
+  return data;
+}
+
+//////////////////////////////////////////////
+// HISTÓRICO
 //////////////////////////////////////////////
 
 async function fetchHistoryStats(teamId) {
   try {
-
     if (!teamId) return [];
 
     const response = await fetch(
@@ -25,13 +51,16 @@ async function fetchHistoryStats(teamId) {
     );
 
     const data = await response.json();
-
     return data.response || [];
 
   } catch {
     return [];
   }
 }
+
+//////////////////////////////////////////////
+// PROGNÓSTICO ESTATÍSTICO (SEM RANDOM)
+//////////////////////////////////////////////
 
 function calculateStatisticalPrognosis(homeHistory, awayHistory, h2h) {
 
@@ -48,14 +77,14 @@ function calculateStatisticalPrognosis(homeHistory, awayHistory, h2h) {
   if (Array.isArray(homeHistory)) {
     homeHistory.forEach(game => {
       if (game?.teams?.home?.winner) homeScore += 1.5;
-      else awayScore += 1.5;
+      if (game?.teams?.away?.winner) awayScore += 1.5;
     });
   }
 
   if (Array.isArray(awayHistory)) {
     awayHistory.forEach(game => {
       if (game?.teams?.away?.winner) awayScore += 1.5;
-      else homeScore += 1.5;
+      if (game?.teams?.home?.winner) homeScore += 1.5;
     });
   }
 
@@ -68,6 +97,19 @@ function calculateStatisticalPrognosis(homeHistory, awayHistory, h2h) {
     100 - (probabilityHome + probabilityAway)
   );
 
+  // Expected Goals REAL (sem random)
+  const avgHomeGoals =
+    homeHistory.length
+      ? homeHistory.reduce((s, g) => s + (g.goals?.home || 0), 0) / homeHistory.length
+      : 1;
+
+  const avgAwayGoals =
+    awayHistory.length
+      ? awayHistory.reduce((s, g) => s + (g.goals?.away || 0), 0) / awayHistory.length
+      : 1;
+
+  const expectedGoals = (avgHomeGoals + avgAwayGoals) / 2;
+
   return {
     probability: {
       homeWin: Number(probabilityHome.toFixed(2)),
@@ -75,44 +117,30 @@ function calculateStatisticalPrognosis(homeHistory, awayHistory, h2h) {
       draw: Number(probabilityDraw.toFixed(2))
     },
     prognosis: {
-      expectedGoals: Number((Math.random() * 3 + 0.5).toFixed(2))
+      expectedGoals: Number(expectedGoals.toFixed(2))
     }
   };
 }
 
-function calcularProbabilidades(teamA, teamB) {
-  const vitoriaA = (teamA.win + teamB.loss) / 2;
-  const vitoriaB = (teamB.win + teamA.loss) / 2;
-  const empate = (teamA.draw + teamB.draw) / 2;
-
-  const total = vitoriaA + vitoriaB + empate;
-
-  const resultadoA = (vitoriaA / total) * 100;
-  const resultadoB = (vitoriaB / total) * 100;
-  const resultadoEmpate = (empate / total) * 100;
-
-  const btts = (teamA.btts + teamB.btts) / 2;
-  const over = (teamA.over25 + teamB.over25) / 2;
-  const under = 100 - over;
-
-  return {
-    vitoriaA: resultadoA.toFixed(0),
-    empate: resultadoEmpate.toFixed(0),
-    vitoriaB: resultadoB.toFixed(0),
-    btts: btts.toFixed(0),
-    underBtts: (100 - btts).toFixed(0),
-    over25: over.toFixed(0),
-    under25: under.toFixed(0)
-  };
-}
+//////////////////////////////////////////////
+// ULTRA ELITE (SEM RANDOM)
+//////////////////////////////////////////////
 
 function ultraElitePredictor(game, stats = {}) {
 
-  const baseRandom = Math.random() * 40 + 60;
+  const homeWins = stats.homeHistory.filter(
+    g => g?.teams?.home?.winner
+  ).length;
 
-  const probabilityHome = Math.min(97, baseRandom);
-  const probabilityAway = Math.min(97, 100 - baseRandom);
+  const awayWins = stats.awayHistory.filter(
+    g => g?.teams?.away?.winner
+  ).length;
 
+  const totalHome = stats.homeHistory.length || 1;
+  const totalAway = stats.awayHistory.length || 1;
+
+  const probabilityHome = (homeWins / totalHome) * 100;
+  const probabilityAway = (awayWins / totalAway) * 100;
   const probabilityDraw = Math.max(
     0,
     100 - (probabilityHome + probabilityAway)
@@ -120,25 +148,16 @@ function ultraElitePredictor(game, stats = {}) {
 
   const riskIndex = Math.abs(probabilityHome - probabilityAway);
 
-  const historicalBonus = stats?.homeHistory?.length
-    ? stats.homeHistory.length * 0.5
-    : 0;
-
   return {
     ultraElite: {
-      probabilityHome: Number(
-        Math.min(97, probabilityHome + historicalBonus).toFixed(2)
-      ),
-      probabilityAway: Number(
-        Math.min(97, probabilityAway + historicalBonus).toFixed(2)
-      ),
+      probabilityHome: Number(probabilityHome.toFixed(2)),
+      probabilityAway: Number(probabilityAway.toFixed(2)),
       probabilityDraw: Number(probabilityDraw.toFixed(2)),
       riskIndex: Number(riskIndex.toFixed(2)),
-
       recommendation:
-        riskIndex > 45
+        riskIndex > 40
           ? "Alta confiança estatística"
-          : riskIndex > 25
+          : riskIndex > 20
           ? "Moderada confiança"
           : "Jogo equilibrado"
     }
@@ -146,7 +165,7 @@ function ultraElitePredictor(game, stats = {}) {
 }
 
 //////////////////////////////////////////////
-// FUNÇÃO CORRIGIDA E PROTEGIDA
+// BUSCAR ÚLTIMOS JOGOS
 //////////////////////////////////////////////
 
 async function buscarUltimosJogos(teamId) {
@@ -189,7 +208,7 @@ async function buscarUltimosJogos(teamId) {
 }
 
 //////////////////////////////////////////////
-// ENDPOINT ELITE ATUALIZADO
+// ENDPOINT ELITE
 //////////////////////////////////////////////
 
 app.get("/api/elite-prob", async (req, res) => {
@@ -237,7 +256,7 @@ app.get("/api/elite-prob", async (req, res) => {
 });
 
 //////////////////////////////////////////////
-// ENDPOINT PRINCIPAL (MANTIDO IGUAL)
+// ENDPOINT PRINCIPAL
 //////////////////////////////////////////////
 
 app.get("/api/jogos", async (req, res) => {
@@ -313,4 +332,14 @@ app.get("/api/jogos", async (req, res) => {
     });
   }
 
+});
+
+//////////////////////////////////////////////
+// START SERVER
+//////////////////////////////////////////////
+
+const PORT = process.env.PORT || 8080;
+
+app.listen(PORT, () => {
+  console.log(`Backend rodando na porta ${PORT}`);
 });
