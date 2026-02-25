@@ -1,5 +1,6 @@
 const express = require("express");
 const fetch = require("node-fetch");
+const calcularElite = require("./engine/eliteEngine");
 
 const app = express();
 app.use(express.json());
@@ -142,6 +143,60 @@ function ultraElitePredictor(game, stats = {}) {
     }
   };
 }
+
+//////////////////////////////////////////////
+// NOVA FUNÇÃO ADICIONADA
+//////////////////////////////////////////////
+
+async function buscarUltimosJogos(teamId) {
+  const response = await fetch(
+    `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=10`,
+    {
+      headers: {
+        "x-apisports-key": process.env.API_FOOTBALL_KEY
+      }
+    }
+  );
+
+  const data = await response.json();
+
+  return data.response.map(jogo => {
+    const isHome = jogo.teams.home.id == teamId;
+
+    return {
+      golsMarcados: isHome
+        ? jogo.goals.home
+        : jogo.goals.away,
+      golsSofridos: isHome
+        ? jogo.goals.away
+        : jogo.goals.home
+    };
+  });
+}
+
+//////////////////////////////////////////////
+// NOVO ENDPOINT ELITE
+//////////////////////////////////////////////
+
+app.get("/api/elite-prob", async (req, res) => {
+  const { teamA, teamB } = req.query;
+
+  try {
+    const jogosA = await buscarUltimosJogos(teamA);
+    const jogosB = await buscarUltimosJogos(teamB);
+
+    const resultado = calcularElite(
+      { jogos: jogosA },
+      { jogos: jogosB }
+    );
+
+    res.json(resultado);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao calcular probabilidades" });
+  }
+});
 
 //////////////////////////////////////////////
 // ENDPOINT PRINCIPAL
