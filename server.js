@@ -34,14 +34,16 @@ async function adaptiveEngine(key, callback, ttl = 60000) {
 }
 
 //////////////////////////////////////////////
-// HISTÓRICO
+// HISTÓRICO (COM FALLBACK INTELIGENTE)
 //////////////////////////////////////////////
 
 async function fetchHistoryStats(teamId) {
   try {
+
     if (!teamId) return [];
 
-    const response = await fetch(
+    // 🔹 Tentativa 1 → últimos 5 finalizados
+    let response = await fetch(
       `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=5&status=FT`,
       {
         headers: {
@@ -50,10 +52,32 @@ async function fetchHistoryStats(teamId) {
       }
     );
 
-    const data = await response.json();
-    return data.response || [];
+    let data = await response.json();
 
-  } catch {
+    if (data.response && data.response.length >= 3) {
+      return data.response;
+    }
+
+    // 🔹 Fallback → últimos 10 (qualquer status)
+    response = await fetch(
+      `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=10`,
+      {
+        headers: {
+          "x-apisports-key": process.env.API_FOOTBALL_KEY
+        }
+      }
+    );
+
+    data = await response.json();
+
+    if (data.response && data.response.length > 0) {
+      return data.response;
+    }
+
+    return [];
+
+  } catch (err) {
+    console.error("Erro fetchHistoryStats:", err);
     return [];
   }
 }
@@ -97,7 +121,6 @@ function calculateStatisticalPrognosis(homeHistory, awayHistory, h2h) {
     100 - (probabilityHome + probabilityAway)
   );
 
-  // Expected Goals REAL (sem random)
   const avgHomeGoals =
     homeHistory.length
       ? homeHistory.reduce((s, g) => s + (g.goals?.home || 0), 0) / homeHistory.length
