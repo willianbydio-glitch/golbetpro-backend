@@ -78,6 +78,32 @@ function calculateStatisticalPrognosis(homeHistory, awayHistory, h2h) {
   };
 }
 
+function calcularProbabilidades(teamA, teamB) {
+  const vitoriaA = (teamA.win + teamB.loss) / 2;
+  const vitoriaB = (teamB.win + teamA.loss) / 2;
+  const empate = (teamA.draw + teamB.draw) / 2;
+
+  const total = vitoriaA + vitoriaB + empate;
+
+  const resultadoA = (vitoriaA / total) * 100;
+  const resultadoB = (vitoriaB / total) * 100;
+  const resultadoEmpate = (empate / total) * 100;
+
+  const btts = (teamA.btts + teamB.btts) / 2;
+  const over = (teamA.over25 + teamB.over25) / 2;
+  const under = 100 - over;
+
+  return {
+    vitoriaA: resultadoA.toFixed(0),
+    empate: resultadoEmpate.toFixed(0),
+    vitoriaB: resultadoB.toFixed(0),
+    btts: btts.toFixed(0),
+    underBtts: (100 - btts).toFixed(0),
+    over25: over.toFixed(0),
+    under25: under.toFixed(0)
+  };
+}
+
 function ultraElitePredictor(game, stats = {}) {
 
   const baseRandom = Math.random() * 40 + 60;
