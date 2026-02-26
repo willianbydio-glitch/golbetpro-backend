@@ -42,7 +42,6 @@ async function fetchHistoryStats(teamId) {
 
     if (!teamId) return [];
 
-    // 🔹 Tentativa 1 → últimos 5 finalizados
     let response = await fetch(
       `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=5&status=FT`,
       {
@@ -58,7 +57,6 @@ async function fetchHistoryStats(teamId) {
       return data.response;
     }
 
-    // 🔹 Fallback → últimos 10 (qualquer status)
     response = await fetch(
       `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=10`,
       {
@@ -279,7 +277,7 @@ app.get("/api/elite-prob", async (req, res) => {
 });
 
 //////////////////////////////////////////////
-// ENDPOINT PRINCIPAL
+// ENDPOINT PRINCIPAL (AGRUPADO POR LIGA)
 //////////////////////////////////////////////
 
 app.get("/api/jogos", async (req, res) => {
@@ -338,9 +336,30 @@ app.get("/api/jogos", async (req, res) => {
           })
         );
 
+        // ✅ AGRUPAR POR CAMPEONATO
+        const jogosPorCampeonato = {};
+
+        jogosProcessados.forEach(game => {
+          const leagueId = game.league.id;
+
+          if (!jogosPorCampeonato[leagueId]) {
+            jogosPorCampeonato[leagueId] = {
+              league: {
+                id: game.league.id,
+                name: game.league.name,
+                logo: game.league.logo,
+                country: game.league.country
+              },
+              games: []
+            };
+          }
+
+          jogosPorCampeonato[leagueId].games.push(game);
+        });
+
         return {
           success: true,
-          response: jogosProcessados
+          response: jogosPorCampeonato
         };
 
       },
