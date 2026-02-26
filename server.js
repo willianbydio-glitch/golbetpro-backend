@@ -1,9 +1,12 @@
 const express = require("express");
 const fetch = require("node-fetch");
+const cors = require("cors"); // ✅ ADICIONADO
 const calcularElite = require("./engine/eliteEngine");
 const calcularPoisson = require("./engine/poisonEngine");
 
 const app = express();
+
+app.use(cors()); // ✅ ADICIONADO
 app.use(express.json());
 
 //////////////////////////////////////////////
@@ -336,7 +339,6 @@ app.get("/api/jogos", async (req, res) => {
           })
         );
 
-        // ✅ AGRUPAR POR CAMPEONATO
         const jogosPorCampeonato = {};
 
         jogosProcessados.forEach(game => {
