@@ -1,16 +1,23 @@
 const express = require("express");
 const fetch = require("node-fetch");
-const cors = require("cors"); // ✅ ADICIONADO
+const cors = require("cors");
 const calcularElite = require("./engine/eliteEngine");
 const calcularPoisson = require("./engine/poisonEngine");
 
+//////////////////////////////////////////////
+// CONFIG API
+//////////////////////////////////////////////
+
+const BASE_URL = "https://v3.football.api-sports.io";
+const API_KEY = process.env.API_FOOTBALL_KEY;
+
 const app = express();
 
-app.use(cors()); // ✅ ADICIONADO
+app.use(cors());
 app.use(express.json());
 
 //////////////////////////////////////////////
-// CACHE ADAPTATIVO (CORREÇÃO 4)
+// CACHE ADAPTATIVO
 //////////////////////////////////////////////
 
 const cache = new Map();
@@ -20,7 +27,6 @@ async function adaptiveEngine(key, callback, ttl = 60000) {
 
   if (cache.has(key)) {
     const cached = cache.get(key);
-
     if (now - cached.timestamp < ttl) {
       return cached.data;
     }
@@ -37,7 +43,7 @@ async function adaptiveEngine(key, callback, ttl = 60000) {
 }
 
 //////////////////////////////////////////////
-// HISTÓRICO (COM FALLBACK INTELIGENTE)
+// HISTÓRICO
 //////////////////////////////////////////////
 
 async function fetchHistoryStats(teamId) {
@@ -46,12 +52,8 @@ async function fetchHistoryStats(teamId) {
     if (!teamId) return [];
 
     let response = await fetch(
-      `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=5&status=FT`,
-      {
-        headers: {
-          "x-apisports-key": process.env.API_FOOTBALL_KEY
-        }
-      }
+      `${BASE_URL}/fixtures?team=${teamId}&last=5&status=FT`,
+      { headers: { "x-apisports-key": API_KEY } }
     );
 
     let data = await response.json();
@@ -61,12 +63,8 @@ async function fetchHistoryStats(teamId) {
     }
 
     response = await fetch(
-      `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=10`,
-      {
-        headers: {
-          "x-apisports-key": process.env.API_FOOTBALL_KEY
-        }
-      }
+      `${BASE_URL}/fixtures?team=${teamId}&last=10`,
+      { headers: { "x-apisports-key": API_KEY } }
     );
 
     data = await response.json();
@@ -84,20 +82,13 @@ async function fetchHistoryStats(teamId) {
 }
 
 //////////////////////////////////////////////
-// PROGNÓSTICO ESTATÍSTICO (SEM RANDOM)
+// PROGNÓSTICO ESTATÍSTICO
 //////////////////////////////////////////////
 
 function calculateStatisticalPrognosis(homeHistory, awayHistory, h2h) {
 
   let homeScore = 50;
   let awayScore = 50;
-
-  if (Array.isArray(h2h)) {
-    h2h.forEach(game => {
-      if (game?.teams?.home?.winner) homeScore += 2;
-      if (game?.teams?.away?.winner) awayScore += 2;
-    });
-  }
 
   if (Array.isArray(homeHistory)) {
     homeHistory.forEach(game => {
@@ -117,10 +108,7 @@ function calculateStatisticalPrognosis(homeHistory, awayHistory, h2h) {
 
   const probabilityHome = (homeScore / total) * 100;
   const probabilityAway = (awayScore / total) * 100;
-  const probabilityDraw = Math.max(
-    0,
-    100 - (probabilityHome + probabilityAway)
-  );
+  const probabilityDraw = Math.max(0, 100 - probabilityHome - probabilityAway);
 
   const avgHomeGoals =
     homeHistory.length
@@ -147,139 +135,6 @@ function calculateStatisticalPrognosis(homeHistory, awayHistory, h2h) {
 }
 
 //////////////////////////////////////////////
-// ULTRA ELITE (SEM RANDOM)
-//////////////////////////////////////////////
-
-function ultraElitePredictor(game, stats = {}) {
-
-  const homeWins = stats.homeHistory.filter(
-    g => g?.teams?.home?.winner
-  ).length;
-
-  const awayWins = stats.awayHistory.filter(
-    g => g?.teams?.away?.winner
-  ).length;
-
-  const totalHome = stats.homeHistory.length || 1;
-  const totalAway = stats.awayHistory.length || 1;
-
-  const probabilityHome = (homeWins / totalHome) * 100;
-  const probabilityAway = (awayWins / totalAway) * 100;
-  const probabilityDraw = Math.max(
-    0,
-    100 - (probabilityHome + probabilityAway)
-  );
-
-  const riskIndex = Math.abs(probabilityHome - probabilityAway);
-
-  return {
-    ultraElite: {
-      probabilityHome: Number(probabilityHome.toFixed(2)),
-      probabilityAway: Number(probabilityAway.toFixed(2)),
-      probabilityDraw: Number(probabilityDraw.toFixed(2)),
-      riskIndex: Number(riskIndex.toFixed(2)),
-      recommendation:
-        riskIndex > 40
-          ? "Alta confiança estatística"
-          : riskIndex > 20
-          ? "Moderada confiança"
-          : "Jogo equilibrado"
-    }
-  };
-}
-
-//////////////////////////////////////////////
-// BUSCAR ÚLTIMOS JOGOS
-//////////////////////////////////////////////
-
-async function buscarUltimosJogos(teamId) {
-  try {
-
-    if (!teamId) return [];
-
-    const response = await fetch(
-      `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=10&status=FT`,
-      {
-        headers: {
-          "x-apisports-key": process.env.API_FOOTBALL_KEY
-        }
-      }
-    );
-
-    const data = await response.json();
-
-    if (!data.response || !Array.isArray(data.response)) {
-      return [];
-    }
-
-    return data.response.map(jogo => {
-      const isHome = jogo.teams.home.id == teamId;
-
-      return {
-        golsMarcados: isHome
-          ? jogo.goals.home
-          : jogo.goals.away,
-        golsSofridos: isHome
-          ? jogo.goals.away
-          : jogo.goals.home
-      };
-    });
-
-  } catch (err) {
-    console.error("Erro buscarUltimosJogos:", err);
-    return [];
-  }
-}
-
-//////////////////////////////////////////////
-// ENDPOINT ELITE
-//////////////////////////////////////////////
-
-app.get("/api/elite-prob", async (req, res) => {
-  const { teamA, teamB } = req.query;
-
-  try {
-
-    const jogosA = await buscarUltimosJogos(teamA);
-    const jogosB = await buscarUltimosJogos(teamB);
-
-    if (!jogosA.length || !jogosB.length) {
-      return res.json({ error: "Histórico insuficiente" });
-    }
-
-    const elite = calcularElite(
-      { jogos: jogosA },
-      { jogos: jogosB }
-    );
-
-    const mediaA = {
-      golsMarcados:
-        jogosA.reduce((s, j) => s + j.golsMarcados, 0) / jogosA.length,
-      golsSofridos:
-        jogosA.reduce((s, j) => s + j.golsSofridos, 0) / jogosA.length
-    };
-
-    const mediaB = {
-      golsMarcados:
-        jogosB.reduce((s, j) => s + j.golsMarcados, 0) / jogosB.length,
-      golsSofridos:
-        jogosB.reduce((s, j) => s + j.golsSofridos, 0) / jogosB.length
-    };
-
-    const poisson = calcularPoisson(mediaA, mediaB);
-
-    res.json({
-      elite,
-      poisson
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erro ao calcular probabilidades" });
-  }
-});
-
-//////////////////////////////////////////////
 // ENDPOINT PRINCIPAL (AGRUPADO POR LIGA)
 //////////////////////////////////////////////
 
@@ -294,12 +149,8 @@ app.get("/api/jogos", async (req, res) => {
       async () => {
 
         const response = await fetch(
-          `https://v3.football.api-sports.io/fixtures?date=${date}`,
-          {
-            headers: {
-              "x-apisports-key": process.env.API_FOOTBALL_KEY
-            }
-          }
+          `${BASE_URL}/fixtures?date=${date}`,
+          { headers: { "x-apisports-key": API_KEY } }
         );
 
         const data = await response.json();
@@ -307,33 +158,18 @@ app.get("/api/jogos", async (req, res) => {
         const jogosProcessados = await Promise.all(
           data.response.map(async game => {
 
-            const homeHistory = await fetchHistoryStats(
-              game.teams?.home?.id
-            );
+            const homeHistory = await fetchHistoryStats(game.teams?.home?.id);
+            const awayHistory = await fetchHistoryStats(game.teams?.away?.id);
 
-            const awayHistory = await fetchHistoryStats(
-              game.teams?.away?.id
-            );
-
-            const h2h = [];
-
-            const stats = {
+            const prediction = calculateStatisticalPrognosis(
               homeHistory,
               awayHistory,
-              h2h
-            };
-
-            const prediction = ultraElitePredictor(game, stats);
-            const prognosis = calculateStatisticalPrognosis(
-              homeHistory,
-              awayHistory,
-              h2h
+              []
             );
 
             return {
               ...game,
-              prediction,
-              prognosis
+              prediction
             };
 
           })
@@ -370,59 +206,42 @@ app.get("/api/jogos", async (req, res) => {
 
     res.json(resultadoFinal);
 
-  } catch {
-    res.status(500).json({
-      error: "Erro ao buscar jogos"
-    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro ao buscar jogos" });
   }
 
 });
+
 //////////////////////////////////////////////
-// PROGNÓSTICO ELITE PRÉ-JOGO
+// NOVO PROGNÓSTICO BASEADO EM HISTÓRICO
 //////////////////////////////////////////////
 
 app.get("/api/prognostico", async (req, res) => {
 
-  const { fixture } = req.query;
+  const { home, away } = req.query;
 
   try {
 
-    // 1️⃣ Buscar dados do jogo
-    const fixtureResponse = await fetch(
-      `${BASE_URL}/fixtures?id=${fixture}`,
-      {
-        headers: { "x-apisports-key": API_KEY }
-      }
-    );
-
-    const fixtureData = await fixtureResponse.json();
-    const jogo = fixtureData.response[0];
-
-    const homeId = jogo.teams.home.id;
-    const awayId = jogo.teams.away.id;
-    const leagueId = jogo.league.id;
-    const season = jogo.league.season;
-
-    // 2️⃣ Buscar últimos 10 jogos de cada time
-    const homeLast = await fetch(
-      `${BASE_URL}/fixtures?team=${homeId}&last=10`,
+    const homeResponse = await fetch(
+      `${BASE_URL}/fixtures?team=${home}&last=10`,
       { headers: { "x-apisports-key": API_KEY } }
     );
 
-    const awayLast = await fetch(
-      `${BASE_URL}/fixtures?team=${awayId}&last=10`,
+    const awayResponse = await fetch(
+      `${BASE_URL}/fixtures?team=${away}&last=10`,
       { headers: { "x-apisports-key": API_KEY } }
     );
 
-    const homeGames = (await homeLast.json()).response;
-    const awayGames = (await awayLast.json()).response;
+    const homeData = await homeResponse.json();
+    const awayData = await awayResponse.json();
 
     function calcularMedia(jogos, teamId) {
       let golsFeitos = 0;
       let golsSofridos = 0;
 
       jogos.forEach(jogo => {
-        if (jogo.teams.home.id === teamId) {
+        if (jogo.teams.home.id == teamId) {
           golsFeitos += jogo.goals.home;
           golsSofridos += jogo.goals.away;
         } else {
@@ -432,62 +251,67 @@ app.get("/api/prognostico", async (req, res) => {
       });
 
       return {
-        mediaFeitos: golsFeitos / jogos.length,
-        mediaSofridos: golsSofridos / jogos.length
+        feitos: golsFeitos / jogos.length,
+        sofridos: golsSofridos / jogos.length
       };
     }
 
-    const homeStats = calcularMedia(homeGames, homeId);
-    const awayStats = calcularMedia(awayGames, awayId);
+    const homeStats = calcularMedia(homeData.response, home);
+    const awayStats = calcularMedia(awayData.response, away);
 
-    // 3️⃣ Expectativa de gols
-    const expHome = (homeStats.mediaFeitos + awayStats.mediaSofridos) / 2;
-    const expAway = (awayStats.mediaFeitos + homeStats.mediaSofridos) / 2;
+    const expectativaCasa = (homeStats.feitos + awayStats.sofridos) / 2;
+    const expectativaFora = (awayStats.feitos + homeStats.sofridos) / 2;
 
-    const totalEsperado = expHome + expAway;
+    const mediaGols = expectativaCasa + expectativaFora;
 
-    // 4️⃣ Probabilidades Over
-    const probOver15 = Math.min(95, (totalEsperado / 2) * 100);
-    const probOver25 = Math.min(95, (totalEsperado / 3) * 100);
-    const probOver35 = Math.min(95, (totalEsperado / 4) * 100);
-    const probOver45 = Math.min(95, (totalEsperado / 5) * 100);
+    const over15 = Math.min(95, (mediaGols / 2) * 100);
+    const over25 = Math.min(95, (mediaGols / 3) * 100);
+    const over35 = Math.min(95, (mediaGols / 4) * 100);
+    const over45 = Math.min(95, (mediaGols / 5) * 100);
 
-    // 5️⃣ Probabilidades Resultado
-    const totalExp = expHome + expAway;
+    const total = expectativaCasa + expectativaFora;
 
-    let probCasa = (expHome / totalExp) * 100;
-    let probFora = (expAway / totalExp) * 100;
-    let probEmpate = 100 - probCasa - probFora;
+    const casa = (expectativaCasa / total) * 100;
+    const fora = (expectativaFora / total) * 100;
+    const empate = 100 - casa - fora;
+
+    let sugestao = "Jogo equilibrado";
+
+    if (over25 > 65) sugestao = "Over 2.5";
+    if (casa > 55) sugestao = "Vitória Casa";
+    if (fora > 55) sugestao = "Vitória Visitante";
 
     res.json({
-      totalEsperado: totalEsperado.toFixed(2),
-      over15: probOver15.toFixed(1),
-      over25: probOver25.toFixed(1),
-      over35: probOver35.toFixed(1),
-      over45: probOver45.toFixed(1),
-      casa: probCasa.toFixed(1),
-      empate: probEmpate.toFixed(1),
-      fora: probFora.toFixed(1)
+      success: true,
+      mediaGols: mediaGols.toFixed(2),
+      over15: over15.toFixed(1),
+      over25: over25.toFixed(1),
+      over35: over35.toFixed(1),
+      over45: over45.toFixed(1),
+      casa: casa.toFixed(1),
+      empate: empate.toFixed(1),
+      fora: fora.toFixed(1),
+      sugestao
     });
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Erro no prognóstico" });
+    res.status(500).json({ success: false });
   }
+
 });
 
-// SUA ROTA NOVA
+//////////////////////////////////////////////
+// ESTATÍSTICAS
+//////////////////////////////////////////////
+
 app.get("/api/estatisticas", async (req, res) => {
   const { fixture } = req.query;
 
   try {
     const response = await fetch(
-      `https://v3.football.api-sports.io/fixtures/statistics?fixture=${fixture}`,
-      {
-        headers: {
-          "x-apisports-key": process.env.API_FOOTBALL_KEY
-        }
-      }
+      `${BASE_URL}/fixtures/statistics?fixture=${fixture}`,
+      { headers: { "x-apisports-key": API_KEY } }
     );
 
     const data = await response.json();
@@ -498,8 +322,10 @@ app.get("/api/estatisticas", async (req, res) => {
   }
 });
 
+//////////////////////////////////////////////
+// START SERVER
+//////////////////////////////////////////////
 
-// 👇 DEIXA ISSO POR ÚLTIMO
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
