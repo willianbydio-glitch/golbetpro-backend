@@ -378,10 +378,30 @@ app.get("/api/jogos", async (req, res) => {
 
 });
 
-//////////////////////////////////////////////
-// START SERVER
-//////////////////////////////////////////////
+// SUA ROTA NOVA
+app.get("/api/estatisticas", async (req, res) => {
+  const { fixture } = req.query;
 
+  try {
+    const response = await fetch(
+      `https://v3.football.api-sports.io/fixtures/statistics?fixture=${fixture}`,
+      {
+        headers: {
+          "x-apisports-key": process.env.API_FOOTBALL_KEY
+        }
+      }
+    );
+
+    const data = await response.json();
+    res.json(data);
+
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar estatísticas" });
+  }
+});
+
+
+// 👇 DEIXA ISSO POR ÚLTIMO
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
