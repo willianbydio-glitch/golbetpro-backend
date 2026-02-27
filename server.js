@@ -377,6 +377,104 @@ app.get("/api/jogos", async (req, res) => {
   }
 
 });
+//////////////////////////////////////////////
+// PROGNÓSTICO ELITE PRÉ-JOGO
+//////////////////////////////////////////////
+
+app.get("/api/prognostico", async (req, res) => {
+
+  const { fixture } = req.query;
+
+  try {
+
+    // 1️⃣ Buscar dados do jogo
+    const fixtureResponse = await fetch(
+      `${BASE_URL}/fixtures?id=${fixture}`,
+      {
+        headers: { "x-apisports-key": API_KEY }
+      }
+    );
+
+    const fixtureData = await fixtureResponse.json();
+    const jogo = fixtureData.response[0];
+
+    const homeId = jogo.teams.home.id;
+    const awayId = jogo.teams.away.id;
+    const leagueId = jogo.league.id;
+    const season = jogo.league.season;
+
+    // 2️⃣ Buscar últimos 10 jogos de cada time
+    const homeLast = await fetch(
+      `${BASE_URL}/fixtures?team=${homeId}&last=10`,
+      { headers: { "x-apisports-key": API_KEY } }
+    );
+
+    const awayLast = await fetch(
+      `${BASE_URL}/fixtures?team=${awayId}&last=10`,
+      { headers: { "x-apisports-key": API_KEY } }
+    );
+
+    const homeGames = (await homeLast.json()).response;
+    const awayGames = (await awayLast.json()).response;
+
+    function calcularMedia(jogos, teamId) {
+      let golsFeitos = 0;
+      let golsSofridos = 0;
+
+      jogos.forEach(jogo => {
+        if (jogo.teams.home.id === teamId) {
+          golsFeitos += jogo.goals.home;
+          golsSofridos += jogo.goals.away;
+        } else {
+          golsFeitos += jogo.goals.away;
+          golsSofridos += jogo.goals.home;
+        }
+      });
+
+      return {
+        mediaFeitos: golsFeitos / jogos.length,
+        mediaSofridos: golsSofridos / jogos.length
+      };
+    }
+
+    const homeStats = calcularMedia(homeGames, homeId);
+    const awayStats = calcularMedia(awayGames, awayId);
+
+    // 3️⃣ Expectativa de gols
+    const expHome = (homeStats.mediaFeitos + awayStats.mediaSofridos) / 2;
+    const expAway = (awayStats.mediaFeitos + homeStats.mediaSofridos) / 2;
+
+    const totalEsperado = expHome + expAway;
+
+    // 4️⃣ Probabilidades Over
+    const probOver15 = Math.min(95, (totalEsperado / 2) * 100);
+    const probOver25 = Math.min(95, (totalEsperado / 3) * 100);
+    const probOver35 = Math.min(95, (totalEsperado / 4) * 100);
+    const probOver45 = Math.min(95, (totalEsperado / 5) * 100);
+
+    // 5️⃣ Probabilidades Resultado
+    const totalExp = expHome + expAway;
+
+    let probCasa = (expHome / totalExp) * 100;
+    let probFora = (expAway / totalExp) * 100;
+    let probEmpate = 100 - probCasa - probFora;
+
+    res.json({
+      totalEsperado: totalEsperado.toFixed(2),
+      over15: probOver15.toFixed(1),
+      over25: probOver25.toFixed(1),
+      over35: probOver35.toFixed(1),
+      over45: probOver45.toFixed(1),
+      casa: probCasa.toFixed(1),
+      empate: probEmpate.toFixed(1),
+      fora: probFora.toFixed(1)
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro no prognóstico" });
+  }
+});
 
 // SUA ROTA NOVA
 app.get("/api/estatisticas", async (req, res) => {
