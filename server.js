@@ -13,6 +13,14 @@ const API_KEY = process.env.API_FOOTBALL_KEY;
 
 const app = express();
 
+//////////////////////////////////////////////
+// ROTA RAIZ (ADICIONADA)
+//////////////////////////////////////////////
+
+app.get("/", (req, res) => {
+  res.send("GolBetPro Elite Backend Online 🚀");
+});
+
 app.use(cors());
 app.use(express.json());
 
@@ -214,7 +222,7 @@ app.get("/api/jogos", async (req, res) => {
 });
 
 //////////////////////////////////////////////
-// NOVO PROGNÓSTICO BASEADO EM HISTÓRICO
+// PROGNÓSTICO
 //////////////////////////////////////////////
 
 app.get("/api/prognostico", async (req, res) => {
