@@ -245,24 +245,46 @@ app.get("/api/prognostico", async (req, res) => {
     const awayData = await awayResponse.json();
 
     function calcularMedia(jogos, teamId) {
-      let golsFeitos = 0;
-      let golsSofridos = 0;
 
-      jogos.forEach(jogo => {
-        if (jogo.teams.home.id == teamId) {
-          golsFeitos += jogo.goals.home;
-          golsSofridos += jogo.goals.away;
-        } else {
-          golsFeitos += jogo.goals.away;
-          golsSofridos += jogo.goals.home;
-        }
-      });
+  if (!jogos || jogos.length === 0) {
+    return { feitos: 1.35, sofridos: 1.35 };
+  }
 
-      return {
-        feitos: golsFeitos / jogos.length,
-        sofridos: golsSofridos / jogos.length
-      };
+  let golsFeitos = 0;
+  let golsSofridos = 0;
+  let validos = 0;
+
+  jogos.forEach(jogo => {
+
+    if (
+      jogo.goals &&
+      jogo.goals.home !== null &&
+      jogo.goals.away !== null
+    ) {
+
+      validos++;
+
+      if (jogo.teams.home.id == teamId) {
+        golsFeitos += jogo.goals.home;
+        golsSofridos += jogo.goals.away;
+      } else {
+        golsFeitos += jogo.goals.away;
+        golsSofridos += jogo.goals.home;
+      }
+
     }
+
+  });
+
+  if (validos === 0) {
+    return { feitos: 1.35, sofridos: 1.35 };
+  }
+
+  return {
+    feitos: golsFeitos / validos,
+    sofridos: golsSofridos / validos
+  };
+}
 
     const homeStats = calcularMedia(homeData.response, home);
     const awayStats = calcularMedia(awayData.response, away);
