@@ -331,6 +331,66 @@ app.get("/api/estatisticas", async (req, res) => {
 });
 
 //////////////////////////////////////////////
+// PROGNÓSTICO ELITE PROFISSIONAL
+//////////////////////////////////////////////
+
+app.get("/api/prognostico-elite", async (req, res) => {
+
+  const { home, away } = req.query;
+
+  try {
+
+    const homeResponse = await fetch(
+      `${BASE_URL}/fixtures?team=${home}&last=10`,
+      { headers: { "x-apisports-key": API_KEY } }
+    );
+
+    const awayResponse = await fetch(
+      `${BASE_URL}/fixtures?team=${away}&last=10`,
+      { headers: { "x-apisports-key": API_KEY } }
+    );
+
+    const homeData = await homeResponse.json();
+    const awayData = await awayResponse.json();
+
+    function calcularMedia(jogos, teamId) {
+      let golsFeitos = 0;
+      let golsSofridos = 0;
+
+      jogos.forEach(jogo => {
+        if (jogo.teams.home.id == teamId) {
+          golsFeitos += jogo.goals.home;
+          golsSofridos += jogo.goals.away;
+        } else {
+          golsFeitos += jogo.goals.away;
+          golsSofridos += jogo.goals.home;
+        }
+      });
+
+      return {
+        feitos: golsFeitos / jogos.length,
+        sofridos: golsSofridos / jogos.length
+      };
+    }
+
+    const homeStats = calcularMedia(homeData.response, home);
+    const awayStats = calcularMedia(awayData.response, away);
+
+    const resultadoElite = calcularElite(homeStats, awayStats);
+
+    res.json({
+      success: true,
+      elite: resultadoElite
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false });
+  }
+
+});
+
+//////////////////////////////////////////////
 // START SERVER
 //////////////////////////////////////////////
 
