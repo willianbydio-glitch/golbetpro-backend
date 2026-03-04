@@ -597,6 +597,27 @@ function calcularEV(probPercent, oddCasa) {
 }
 
     const evAnalise = {
+      //////////////////////////////////////////
+// DETECTAR MELHOR VALUE BET
+//////////////////////////////////////////
+
+let melhorMercado = null;
+let maiorEV = 0;
+
+Object.entries(evAnalise).forEach(([mercado, dados]) => {
+  if (dados && dados.value && dados.ev > maiorEV) {
+    maiorEV = dados.ev;
+    melhorMercado = mercado;
+  }
+});
+
+const valueBet = melhorMercado
+  ? {
+      market: melhorMercado,
+      ev: maiorEV
+    }
+  : null;
+    
   homeWin: calcularEV(resultadoElite.probability.homeWin, oddCasaHome),
   draw: calcularEV(resultadoElite.probability.draw, oddCasaDraw),
   awayWin: calcularEV(resultadoElite.probability.awayWin, oddCasaAway),
@@ -616,6 +637,7 @@ res.json({
   elite: resultadoElite,
   oddsJustas,
   evAnalise,
+  valueBet, // 👈 ADICIONE AQUI
   leagueAverage: Number(leagueAverage.toFixed(2))
 });
 
