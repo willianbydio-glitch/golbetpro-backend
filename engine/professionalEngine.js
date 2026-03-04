@@ -2,6 +2,10 @@
 // GOLBETPRO ELITE ENGINE 2.0 PROFISSIONAL
 //////////////////////////////////////////////
 
+//////////////////////////////////////////////
+// GOLBETPRO ELITE ENGINE 2.0 PROFISSIONAL
+//////////////////////////////////////////////
+
 function factorial(n) {
   if (n === 0) return 1;
   let r = 1;
@@ -19,9 +23,6 @@ function safeNumber(n, fallback = 1) {
 }
 
 function calcularElite(homeStats, awayStats, leagueAverage = 1.35) {
-
-  // MÉDIA PADRÃO DA LIGA (fallback seguro)
-  const leagueAverage = 1.35;
 
   // PROTEÇÃO CONTRA HISTÓRICO VAZIO
   const homeFeitos = safeNumber(homeStats?.feitos, leagueAverage);
