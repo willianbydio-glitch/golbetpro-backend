@@ -356,7 +356,11 @@ app.get("/api/estatisticas", async (req, res) => {
 // PROGNÓSTICO ELITE PROFISSIONAL
 //////////////////////////////////////////////
 
+
 app.get("/api/prognostico-elite", async (req, res) => {
+
+  const { home, away, league } = req.query;
+const season = 2025; // pode deixar fixo por enquanto
 
   const { home, away } = req.query;
 
