@@ -362,7 +362,16 @@ app.get("/api/estatisticas", async (req, res) => {
 
 app.get("/api/prognostico-elite", async (req, res) => {
 
-  const { home, away, league } = req.query;
+  const {
+  home,
+  away,
+  league,
+  oddCasaHome,
+  oddCasaDraw,
+  oddCasaAway,
+  oddCasaOver25,
+  oddCasaBtts
+} = req.query;
   const season = 2025;
 
   try {
@@ -571,14 +580,42 @@ const oddsJustas = {
   btts: oddJusta(resultadoElite.markets.btts)
 };
 
+    //////////////////////////////////////////
+// CALCULAR EV+
+//////////////////////////////////////////
+
+function calcularEV(probPercent, oddCasa) {
+  if (!oddCasa) return null;
+
+  const prob = Number(probPercent) / 100;
+  const ev = (prob * Number(oddCasa)) - 1;
+
+  return {
+    ev: Number((ev * 100).toFixed(2)), // em %
+    value: ev > 0
+  };
+}
+
+    const evAnalise = {
+  homeWin: calcularEV(resultadoElite.probability.homeWin, oddCasaHome),
+  draw: calcularEV(resultadoElite.probability.draw, oddCasaDraw),
+  awayWin: calcularEV(resultadoElite.probability.awayWin, oddCasaAway),
+  over25: calcularEV(resultadoElite.markets.over25, oddCasaOver25),
+  btts: calcularEV(resultadoElite.markets.btts, oddCasaBtts)
+};
+
+
+    
+
 //////////////////////////////////////////
 // RESPOSTA FINAL
 //////////////////////////////////////////
-
+    
 res.json({
   success: true,
   elite: resultadoElite,
   oddsJustas,
+  evAnalise,
   leagueAverage: Number(leagueAverage.toFixed(2))
 });
 
