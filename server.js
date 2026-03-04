@@ -580,21 +580,6 @@ const oddsJustas = {
   btts: oddJusta(resultadoElite.markets.btts)
 };
 
-    //////////////////////////////////////////
-// CALCULAR EV+
-//////////////////////////////////////////
-
-function calcularEV(probPercent, oddCasa) {
-  if (!oddCasa) return null;
-
-  const prob = Number(probPercent) / 100;
-  const ev = (prob * Number(oddCasa)) - 1;
-
-  return {
-    ev: Number((ev * 100).toFixed(2)), // em %
-    value: ev > 0
-  };
-}
 
     //////////////////////////////////////////
 // CALCULAR EV+
@@ -654,7 +639,14 @@ res.json({
   leagueAverage: Number(leagueAverage.toFixed(2))
 });
 
-    //////////////////////////////////////////////
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false });
+  }
+
+}); // 👈 FECHA A ROTA ELITE
+
+//////////////////////////////////////////////
 // START SERVER
 //////////////////////////////////////////////
 
