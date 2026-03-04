@@ -18,7 +18,7 @@ function safeNumber(n, fallback = 1) {
   return n;
 }
 
-function calcularElite(homeStats, awayStats) {
+function calcularElite(homeStats, awayStats, leagueAverage = 1.35) {
 
   // MÉDIA PADRÃO DA LIGA (fallback seguro)
   const leagueAverage = 1.35;
