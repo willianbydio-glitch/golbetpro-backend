@@ -353,60 +353,134 @@ app.get("/api/estatisticas", async (req, res) => {
 });
 
 //////////////////////////////////////////////
-// PROGNÓSTICO ELITE PROFISSIONAL
+// PROGNÓSTICO ELITE PROFISSIONAL (CORRIGIDO)
 //////////////////////////////////////////////
-
 
 app.get("/api/prognostico-elite", async (req, res) => {
 
   const { home, away, league } = req.query;
-const season = 2025; // pode deixar fixo por enquanto
-
-  const { home, away } = req.query;
+  const season = 2025;
 
   try {
 
+    //////////////////////////////////////////
+    // BUSCAR HISTÓRICO DOS TIMES
+    //////////////////////////////////////////
+
     const homeResponse = await fetch(
-      `${BASE_URL}/fixtures?team=${home}&last=10`,
+      `${BASE_URL}/fixtures?team=${home}&last=10&status=FT`,
       { headers: { "x-apisports-key": API_KEY } }
     );
 
     const awayResponse = await fetch(
-      `${BASE_URL}/fixtures?team=${away}&last=10`,
+      `${BASE_URL}/fixtures?team=${away}&last=10&status=FT`,
       { headers: { "x-apisports-key": API_KEY } }
     );
 
     const homeData = await homeResponse.json();
     const awayData = await awayResponse.json();
 
-    function calcularMedia(jogos, teamId) {
-      let golsFeitos = 0;
-      let golsSofridos = 0;
+    //////////////////////////////////////////
+    // BUSCAR MÉDIA REAL DA LIGA
+    //////////////////////////////////////////
 
-      jogos.forEach(jogo => {
-        if (jogo.teams.home.id == teamId) {
-          golsFeitos += jogo.goals.home;
-          golsSofridos += jogo.goals.away;
-        } else {
-          golsFeitos += jogo.goals.away;
-          golsSofridos += jogo.goals.home;
+    let leagueAverage = 1.35;
+
+    if (league) {
+
+      const leagueResponse = await fetch(
+        `${BASE_URL}/fixtures?league=${league}&season=${season}&last=100&status=FT`,
+        { headers: { "x-apisports-key": API_KEY } }
+      );
+
+      const leagueData = await leagueResponse.json();
+
+      let totalGols = 0;
+      let totalJogos = 0;
+
+      leagueData.response.forEach(jogo => {
+        if (
+          jogo.goals &&
+          jogo.goals.home !== null &&
+          jogo.goals.away !== null
+        ) {
+          totalGols += jogo.goals.home + jogo.goals.away;
+          totalJogos++;
         }
       });
 
+      if (totalJogos > 0) {
+        leagueAverage = totalGols / totalJogos / 2;
+      }
+    }
+
+    //////////////////////////////////////////
+    // CALCULAR MÉDIAS DOS TIMES
+    //////////////////////////////////////////
+
+    function calcularMedia(jogos, teamId) {
+
+      if (!jogos || jogos.length === 0) {
+        return { feitos: 1.35, sofridos: 1.35 };
+      }
+
+      let golsFeitos = 0;
+      let golsSofridos = 0;
+      let validos = 0;
+
+      jogos.forEach(jogo => {
+
+        if (
+          jogo.goals &&
+          jogo.goals.home !== null &&
+          jogo.goals.away !== null
+        ) {
+
+          validos++;
+
+          if (jogo.teams.home.id == teamId) {
+            golsFeitos += jogo.goals.home;
+            golsSofridos += jogo.goals.away;
+          } else {
+            golsFeitos += jogo.goals.away;
+            golsSofridos += jogo.goals.home;
+          }
+
+        }
+
+      });
+
+      if (validos === 0) {
+        return { feitos: 1.35, sofridos: 1.35 };
+      }
+
       return {
-        feitos: golsFeitos / jogos.length,
-        sofridos: golsSofridos / jogos.length
+        feitos: golsFeitos / validos,
+        sofridos: golsSofridos / validos
       };
     }
 
     const homeStats = calcularMedia(homeData.response, home);
     const awayStats = calcularMedia(awayData.response, away);
 
-    const resultadoElite = calcularElite(homeStats, awayStats);
+    //////////////////////////////////////////
+    // CHAMAR ENGINE ELITE COM MÉDIA DA LIGA
+    //////////////////////////////////////////
+
+    const resultadoElite = calcularElite(
+      homeStats,
+      awayStats,
+      leagueAverage
+    );
+
+    //////////////////////////////////////////
+    // RESPOSTA
+    //////////////////////////////////////////
 
     res.json({
       success: true,
-      elite: resultadoElite
+      elite: resultadoElite,
+      leagueAverage: Number(leagueAverage.toFixed(2))
     });
 
   } catch (error) {
@@ -415,7 +489,6 @@ const season = 2025; // pode deixar fixo por enquanto
   }
 
 });
-
 //////////////////////////////////////////////
 // START SERVER
 //////////////////////////////////////////////
