@@ -653,3 +653,13 @@ res.json({
   valueBet,
   leagueAverage: Number(leagueAverage.toFixed(2))
 });
+
+    //////////////////////////////////////////////
+// START SERVER
+//////////////////////////////////////////////
+
+const PORT = process.env.PORT || 8080;
+
+app.listen(PORT, () => {
+  console.log(`Backend rodando na porta ${PORT}`);
+});
