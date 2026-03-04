@@ -553,8 +553,7 @@ app.get("/api/prognostico-elite", async (req, res) => {
       awayStats,
       leagueAverage
     );
-
-    //////////////////////////////////////////
+//////////////////////////////////////////
 // CALCULAR ODDS JUSTAS
 //////////////////////////////////////////
 
@@ -572,15 +571,16 @@ const oddsJustas = {
   btts: oddJusta(resultadoElite.markets.btts)
 };
 
-    //////////////////////////////////////////
-    // RESPOSTA
-    //////////////////////////////////////////
+//////////////////////////////////////////
+// RESPOSTA FINAL
+//////////////////////////////////////////
 
-    res.json({
-      success: true,
-      elite: resultadoElite,
-      leagueAverage: Number(leagueAverage.toFixed(2))
-    });
+res.json({
+  success: true,
+  elite: resultadoElite,
+  oddsJustas,
+  leagueAverage: Number(leagueAverage.toFixed(2))
+});
 
   } catch (error) {
     console.error(error);
