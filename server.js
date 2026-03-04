@@ -555,6 +555,24 @@ app.get("/api/prognostico-elite", async (req, res) => {
     );
 
     //////////////////////////////////////////
+// CALCULAR ODDS JUSTAS
+//////////////////////////////////////////
+
+function oddJusta(prob) {
+  const p = Number(prob) / 100;
+  if (!p || p <= 0) return null;
+  return Number((1 / p).toFixed(2));
+}
+
+const oddsJustas = {
+  homeWin: oddJusta(resultadoElite.probability.homeWin),
+  draw: oddJusta(resultadoElite.probability.draw),
+  awayWin: oddJusta(resultadoElite.probability.awayWin),
+  over25: oddJusta(resultadoElite.markets.over25),
+  btts: oddJusta(resultadoElite.markets.btts)
+};
+
+    //////////////////////////////////////////
     // RESPOSTA
     //////////////////////////////////////////
 
