@@ -596,8 +596,31 @@ function calcularEV(probPercent, oddCasa) {
   };
 }
 
-    const evAnalise = {
-      //////////////////////////////////////////
+    //////////////////////////////////////////
+// CALCULAR EV+
+//////////////////////////////////////////
+
+function calcularEV(probPercent, oddCasa) {
+  if (!oddCasa) return null;
+
+  const prob = Number(probPercent) / 100;
+  const ev = (prob * Number(oddCasa)) - 1;
+
+  return {
+    ev: Number((ev * 100).toFixed(2)), // em %
+    value: ev > 0
+  };
+}
+
+const evAnalise = {
+  homeWin: calcularEV(resultadoElite.probability.homeWin, oddCasaHome),
+  draw: calcularEV(resultadoElite.probability.draw, oddCasaDraw),
+  awayWin: calcularEV(resultadoElite.probability.awayWin, oddCasaAway),
+  over25: calcularEV(resultadoElite.markets.over25, oddCasaOver25),
+  btts: calcularEV(resultadoElite.markets.btts, oddCasaBtts)
+};
+
+//////////////////////////////////////////
 // DETECTAR MELHOR VALUE BET
 //////////////////////////////////////////
 
@@ -617,42 +640,16 @@ const valueBet = melhorMercado
       ev: maiorEV
     }
   : null;
-    
-  homeWin: calcularEV(resultadoElite.probability.homeWin, oddCasaHome),
-  draw: calcularEV(resultadoElite.probability.draw, oddCasaDraw),
-  awayWin: calcularEV(resultadoElite.probability.awayWin, oddCasaAway),
-  over25: calcularEV(resultadoElite.markets.over25, oddCasaOver25),
-  btts: calcularEV(resultadoElite.markets.btts, oddCasaBtts)
-};
-
-
-    
 
 //////////////////////////////////////////
 // RESPOSTA FINAL
 //////////////////////////////////////////
-    
+
 res.json({
   success: true,
   elite: resultadoElite,
   oddsJustas,
   evAnalise,
-  valueBet, // 👈 ADICIONE AQUI
+  valueBet,
   leagueAverage: Number(leagueAverage.toFixed(2))
-});
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false });
-  }
-
-});
-//////////////////////////////////////////////
-// START SERVER
-//////////////////////////////////////////////
-
-const PORT = process.env.PORT || 8080;
-
-app.listen(PORT, () => {
-  console.log(`Backend rodando na porta ${PORT}`);
 });
