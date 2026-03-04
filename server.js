@@ -356,6 +356,10 @@ app.get("/api/estatisticas", async (req, res) => {
 // PROGNÓSTICO ELITE PROFISSIONAL (CORRIGIDO)
 //////////////////////////////////////////////
 
+//////////////////////////////////////////////
+// PROGNÓSTICO ELITE PROFISSIONAL (COM FORMA RECENTE 70/30)
+//////////////////////////////////////////////
+
 app.get("/api/prognostico-elite", async (req, res) => {
 
   const { home, away, league } = req.query;
@@ -364,7 +368,7 @@ app.get("/api/prognostico-elite", async (req, res) => {
   try {
 
     //////////////////////////////////////////
-    // BUSCAR HISTÓRICO DOS TIMES
+    // BUSCAR HISTÓRICO TEMPORADA (10 JOGOS)
     //////////////////////////////////////////
 
     const homeResponse = await fetch(
@@ -379,6 +383,23 @@ app.get("/api/prognostico-elite", async (req, res) => {
 
     const homeData = await homeResponse.json();
     const awayData = await awayResponse.json();
+
+    //////////////////////////////////////////
+    // FORMA RECENTE (5 JOGOS)
+    //////////////////////////////////////////
+
+    const lastHomeResponse = await fetch(
+      `${BASE_URL}/fixtures?team=${home}&last=5&status=FT`,
+      { headers: { "x-apisports-key": API_KEY } }
+    );
+
+    const lastAwayResponse = await fetch(
+      `${BASE_URL}/fixtures?team=${away}&last=5&status=FT`,
+      { headers: { "x-apisports-key": API_KEY } }
+    );
+
+    const lastHomeData = await lastHomeResponse.json();
+    const lastAwayData = await lastAwayResponse.json();
 
     //////////////////////////////////////////
     // BUSCAR MÉDIA REAL DA LIGA
@@ -415,7 +436,7 @@ app.get("/api/prognostico-elite", async (req, res) => {
     }
 
     //////////////////////////////////////////
-    // CALCULAR MÉDIAS DOS TIMES
+    // FUNÇÃO MÉDIA TEMPORADA
     //////////////////////////////////////////
 
     function calcularMedia(jogos, teamId) {
@@ -460,11 +481,71 @@ app.get("/api/prognostico-elite", async (req, res) => {
       };
     }
 
+    //////////////////////////////////////////
+    // FUNÇÃO MÉDIA RECENTE
+    //////////////////////////////////////////
+
+    function calcularMediaRecente(jogos, teamId) {
+
+      if (!jogos || jogos.length === 0) {
+        return { feitos: 1.35, sofridos: 1.35 };
+      }
+
+      let feitos = 0;
+      let sofridos = 0;
+
+      jogos.forEach(jogo => {
+
+        const isHome = jogo.teams.home.id === teamId;
+
+        if (isHome) {
+          feitos += jogo.goals.home;
+          sofridos += jogo.goals.away;
+        } else {
+          feitos += jogo.goals.away;
+          sofridos += jogo.goals.home;
+        }
+
+      });
+
+      return {
+        feitos: feitos / jogos.length || 1.35,
+        sofridos: sofridos / jogos.length || 1.35
+      };
+    }
+
+    //////////////////////////////////////////
+    // CALCULAR MÉDIAS
+    //////////////////////////////////////////
+
     const homeStats = calcularMedia(homeData.response, home);
     const awayStats = calcularMedia(awayData.response, away);
 
+    const homeRecente = calcularMediaRecente(lastHomeData.response, home);
+    const awayRecente = calcularMediaRecente(lastAwayData.response, away);
+
     //////////////////////////////////////////
-    // CHAMAR ENGINE ELITE COM MÉDIA DA LIGA
+    // PESO 70% TEMPORADA | 30% RECENTE
+    //////////////////////////////////////////
+
+    homeStats.feitos =
+      (homeStats.feitos * 0.7) +
+      (homeRecente.feitos * 0.3);
+
+    homeStats.sofridos =
+      (homeStats.sofridos * 0.7) +
+      (homeRecente.sofridos * 0.3);
+
+    awayStats.feitos =
+      (awayStats.feitos * 0.7) +
+      (awayRecente.feitos * 0.3);
+
+    awayStats.sofridos =
+      (awayStats.sofridos * 0.7) +
+      (awayRecente.sofridos * 0.3);
+
+    //////////////////////////////////////////
+    // CHAMAR ENGINE ELITE
     //////////////////////////////////////////
 
     const resultadoElite = calcularElite(
