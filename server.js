@@ -557,11 +557,37 @@ app.get("/api/prognostico-elite", async (req, res) => {
     // CHAMAR ENGINE ELITE
     //////////////////////////////////////////
 
-    const resultadoElite = calcularElite(
-      homeStats,
-      awayStats,
-      leagueAverage
-    );
+    //////////////////////////////////////////
+// NORMALIZAÇÃO PROFISSIONAL
+//////////////////////////////////////////
+
+const forcaAtaqueCasa = homeStats.feitos / leagueAverage;
+const forcaDefesaCasa = homeStats.sofridos / leagueAverage;
+
+const forcaAtaqueFora = awayStats.feitos / leagueAverage;
+const forcaDefesaFora = awayStats.sofridos / leagueAverage;
+
+const xgCasa =
+  forcaAtaqueCasa *
+  forcaDefesaFora *
+  leagueAverage;
+
+const xgFora =
+  forcaAtaqueFora *
+  forcaDefesaCasa *
+  leagueAverage;
+
+const resultadoElite = calcularElite(
+  {
+    feitos: xgCasa,
+    sofridos: xgFora
+  },
+  {
+    feitos: xgFora,
+    sofridos: xgCasa
+  },
+  leagueAverage
+);
 //////////////////////////////////////////
 // CALCULAR ODDS JUSTAS
 //////////////////////////////////////////
