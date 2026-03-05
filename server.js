@@ -673,6 +673,234 @@ res.json({
 }); // 👈 FECHA A ROTA ELITE
 
 //////////////////////////////////////////////
+// ELITE TRADER SCANNER - SUPER ELITE HARD PRO MAX
+//////////////////////////////////////////////
+
+app.get("/api/elite-trader", async (req, res) => {
+
+  const { date, league } = req.query;
+
+  try {
+
+    const resultado = await adaptiveEngine(
+      `elite_trader_${date}_${league || "all"}`,
+      async () => {
+
+        //////////////////////////////////////////////////
+        // BUSCAR JOGOS DO DIA
+        //////////////////////////////////////////////////
+
+        let url = `${BASE_URL}/fixtures?date=${date}`;
+
+        if (league) {
+          url += `&league=${league}&season=2025`;
+        }
+
+        const response = await fetch(url, {
+          headers: { "x-apisports-key": API_KEY }
+        });
+
+        const data = await response.json();
+
+        if (!data.response) return { success: true, total: 0, elitePicks: [] };
+
+        let oportunidades = [];
+
+        //////////////////////////////////////////////////
+        // LOOP EM TODOS OS JOGOS
+        //////////////////////////////////////////////////
+
+        for (let game of data.response) {
+
+          if (game.fixture.status.short !== "NS") continue;
+
+          const fixtureId = game.fixture.id;
+          const homeId = game.teams.home.id;
+          const awayId = game.teams.away.id;
+
+          //////////////////////////////////////////////////
+          // BUSCAR ODDS
+          //////////////////////////////////////////////////
+
+          const oddsResponse = await fetch(
+            `${BASE_URL}/odds?fixture=${fixtureId}`,
+            { headers: { "x-apisports-key": API_KEY } }
+          );
+
+          const oddsData = await oddsResponse.json();
+
+          if (!oddsData.response || oddsData.response.length === 0) continue;
+
+          const bookmaker = oddsData.response[0]?.bookmakers?.[0];
+          if (!bookmaker) continue;
+
+          const markets = bookmaker.bets;
+
+          function pegarOdd(nomeMercado, valor) {
+            const mercado = markets.find(m => m.name === nomeMercado);
+            if (!mercado) return null;
+            const opcao = mercado.values.find(v => v.value === valor);
+            return opcao ? Number(opcao.odd) : null;
+          }
+
+          const oddHome = pegarOdd("Match Winner", "Home");
+          const oddDraw = pegarOdd("Match Winner", "Draw");
+          const oddAway = pegarOdd("Match Winner", "Away");
+          const oddOver25 = pegarOdd("Goals Over/Under", "Over 2.5");
+          const oddBTTS = pegarOdd("Both Teams Score", "Yes");
+
+          if (!oddHome && !oddOver25) continue;
+
+          //////////////////////////////////////////////////
+          // BUSCAR MÉDIAS DOS TIMES
+          //////////////////////////////////////////////////
+
+          const homeHistory = await fetchHistoryStats(homeId);
+          const awayHistory = await fetchHistoryStats(awayId);
+
+          function media(jogos, id) {
+            if (!jogos || jogos.length === 0)
+              return { feitos: 1.35, sofridos: 1.35 };
+
+            let feitos = 0;
+            let sofridos = 0;
+
+            jogos.forEach(j => {
+              const isHome = j.teams.home.id === id;
+              feitos += isHome ? j.goals.home : j.goals.away;
+              sofridos += isHome ? j.goals.away : j.goals.home;
+            });
+
+            return {
+              feitos: feitos / jogos.length,
+              sofridos: sofridos / jogos.length
+            };
+          }
+
+          const homeStats = media(homeHistory, homeId);
+          const awayStats = media(awayHistory, awayId);
+
+          const leagueAverage = 1.35;
+
+          const xgCasa =
+            (homeStats.feitos / leagueAverage) *
+            (awayStats.sofridos / leagueAverage) *
+            leagueAverage;
+
+          const xgFora =
+            (awayStats.feitos / leagueAverage) *
+            (homeStats.sofridos / leagueAverage) *
+            leagueAverage;
+
+          const elite = calcularElite(
+            { feitos: xgCasa, sofridos: xgFora },
+            { feitos: xgFora, sofridos: xgCasa },
+            leagueAverage
+          );
+
+          //////////////////////////////////////////////////
+          // ANALISAR MERCADOS
+          //////////////////////////////////////////////////
+
+          const mercados = [
+            { nome: "Home Win", prob: elite.probability.homeWin, odd: oddHome },
+            { nome: "Away Win", prob: elite.probability.awayWin, odd: oddAway },
+            { nome: "Over 2.5", prob: elite.markets.over25, odd: oddOver25 },
+            { nome: "BTTS", prob: elite.markets.btts, odd: oddBTTS }
+          ];
+
+          for (let m of mercados) {
+
+            if (!m.odd) continue;
+
+            const probModelo = Number(m.prob) / 100;
+            const probImplicita = 1 / m.odd;
+
+            const ev = (probModelo * m.odd) - 1;
+            const edge = probModelo - probImplicita;
+
+            if (ev < 0.03) continue;
+            if (probModelo < 0.52) continue;
+            if (m.odd < 1.40 || m.odd > 3.50) continue;
+
+            const traderScore =
+              (ev * 0.5) +
+              (probModelo * 0.3) +
+              (edge * 0.2);
+
+            //////////////////////////////////////////////////
+            // CLASSIFICAÇÃO
+            //////////////////////////////////////////////////
+
+            let rating = "B";
+            if (traderScore > 0.12) rating = "A+";
+            else if (traderScore > 0.09) rating = "A";
+
+            //////////////////////////////////////////////////
+            // KELLY 25%
+            //////////////////////////////////////////////////
+
+            let kelly = ((probModelo * m.odd - 1) / (m.odd - 1));
+            kelly = Math.max(0, kelly) * 0.25;
+
+            //////////////////////////////////////////////////
+            // RISCO
+            //////////////////////////////////////////////////
+
+            let risco = "Médio";
+            if (m.odd < 1.70) risco = "Baixo";
+            if (m.odd > 2.30) risco = "Alto";
+
+            //////////////////////////////////////////////////
+            // ALERTA ULTRA VALUE
+            //////////////////////////////////////////////////
+
+            let alerta = null;
+            if (ev > 0.08 && probModelo > 0.60 && edge > 0.05) {
+              alerta = "🔥 ULTRA VALUE";
+            }
+
+            oportunidades.push({
+              jogo: `${game.teams.home.name} x ${game.teams.away.name}`,
+              liga: game.league.name,
+              mercado: m.nome,
+              odd: m.odd,
+              probModelo: (probModelo * 100).toFixed(2),
+              ev: (ev * 100).toFixed(2),
+              edge: (edge * 100).toFixed(2),
+              traderScore: traderScore.toFixed(4),
+              rating,
+              stakeRecomendada: (kelly * 100).toFixed(2) + "%",
+              risco,
+              alerta
+            });
+
+          }
+
+        }
+
+        oportunidades.sort((a, b) => b.traderScore - a.traderScore);
+
+        return {
+          success: true,
+          total: oportunidades.length,
+          elitePicks: oportunidades.slice(0, 15)
+        };
+
+      },
+      120000
+    );
+
+    res.json(resultado);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro no Elite Trader Scanner" });
+  }
+
+});
+
+//////////////////////////////////////////////
 // START SERVER
 //////////////////////////////////////////////
 
