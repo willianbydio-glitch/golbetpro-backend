@@ -1,5 +1,5 @@
 //////////////////////////////////////////////
-// GOLBETPRO ELITE ENGINE 2.2 PROFISSIONAL
+// GOLBETPRO ELITE ENGINE 2.3 PROFISSIONAL
 //////////////////////////////////////////////
 
 function factorial(n) {
@@ -21,7 +21,7 @@ function safeNumber(n, fallback = 1) {
 function calcularElite(homeStats, awayStats, leagueAverage = 1.35) {
 
   ///////////////////////////////////////////////////////
-  // homeStats.feitos E awayStats.feitos JÁ SÃO xG
+  // homeStats.feitos e awayStats.feitos já são xG
   ///////////////////////////////////////////////////////
 
   let lambdaHome = safeNumber(homeStats?.feitos, leagueAverage);
@@ -39,51 +39,48 @@ function calcularElite(homeStats, awayStats, leagueAverage = 1.35) {
   let matrix = [];
 
   //////////////////////////////////////////
-  // PARÂMETRO DIXON-C0LES (ajuste leve)
+  // MATRIZ EXPANDIDA 0-8 GOLS
   //////////////////////////////////////////
 
-  const rho = -0.08;
+  for (let i = 0; i <= 8; i++) {
+    for (let j = 0; j <= 8; j++) {
 
-  //////////////////////////////////////////
-  // MATRIZ 0-6 GOLS COM CORREÇÃO
-  //////////////////////////////////////////
-
-  for (let i = 0; i <= 6; i++) {
-    for (let j = 0; j <= 6; j++) {
-
-      let p =
+      const p =
         poisson(lambdaHome, i) *
         poisson(lambdaAway, j);
-
-      // Ajuste Dixon-Coles apenas para placares baixos
-      if (i === 0 && j === 0) {
-        p *= (1 - (lambdaHome * lambdaAway * rho));
-      }
-
-      if (i === 0 && j === 1) {
-        p *= (1 + (lambdaHome * rho));
-      }
-
-      if (i === 1 && j === 0) {
-        p *= (1 + (lambdaAway * rho));
-      }
-
-      if (i === 1 && j === 1) {
-        p *= (1 - rho);
-      }
 
       matrix.push({
         score: `${i}x${j}`,
         probability: p
       });
-
-      if (i > j) homeWin += p;
-      if (i === j) draw += p;
-      if (i < j) awayWin += p;
-
-      if (i + j >= 3) over25 += p;
-      if (i >= 1 && j >= 1) btts += p;
     }
+  }
+
+  //////////////////////////////////////////
+  // RENORMALIZAÇÃO TOTAL
+  //////////////////////////////////////////
+
+  const totalProb = matrix.reduce((sum, item) => sum + item.probability, 0);
+
+  matrix = matrix.map(item => ({
+    ...item,
+    probability: item.probability / totalProb
+  }));
+
+  //////////////////////////////////////////
+  // RECÁLCULO DOS MERCADOS
+  //////////////////////////////////////////
+
+  for (let item of matrix) {
+    const [i, j] = item.score.split('x').map(Number);
+    const p = item.probability;
+
+    if (i > j) homeWin += p;
+    if (i === j) draw += p;
+    if (i < j) awayWin += p;
+
+    if (i + j >= 3) over25 += p;
+    if (i >= 1 && j >= 1) btts += p;
   }
 
   //////////////////////////////////////////
