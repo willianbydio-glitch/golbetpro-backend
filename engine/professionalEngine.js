@@ -1,5 +1,5 @@
 //////////////////////////////////////////////
-// GOLBETPRO ELITE ENGINE 2.1 PROFISSIONAL
+// GOLBETPRO ELITE ENGINE 2.2 PROFISSIONAL
 //////////////////////////////////////////////
 
 function factorial(n) {
@@ -21,14 +21,12 @@ function safeNumber(n, fallback = 1) {
 function calcularElite(homeStats, awayStats, leagueAverage = 1.35) {
 
   ///////////////////////////////////////////////////////
-  // AGORA homeStats.feitos E awayStats.feitos JÁ SÃO xG
-  // NÃO FAZEMOS MAIS NORMALIZAÇÃO AQUI
+  // homeStats.feitos E awayStats.feitos JÁ SÃO xG
   ///////////////////////////////////////////////////////
 
   let lambdaHome = safeNumber(homeStats?.feitos, leagueAverage);
   let lambdaAway = safeNumber(awayStats?.feitos, leagueAverage);
 
-  // Limite mínimo para evitar distorção matemática
   lambdaHome = Math.max(0.2, lambdaHome);
   lambdaAway = Math.max(0.2, lambdaAway);
 
@@ -41,15 +39,38 @@ function calcularElite(homeStats, awayStats, leagueAverage = 1.35) {
   let matrix = [];
 
   //////////////////////////////////////////
-  // MATRIZ 0-6 GOLS
+  // PARÂMETRO DIXON-C0LES (ajuste leve)
+  //////////////////////////////////////////
+
+  const rho = -0.08;
+
+  //////////////////////////////////////////
+  // MATRIZ 0-6 GOLS COM CORREÇÃO
   //////////////////////////////////////////
 
   for (let i = 0; i <= 6; i++) {
     for (let j = 0; j <= 6; j++) {
 
-      const p =
+      let p =
         poisson(lambdaHome, i) *
         poisson(lambdaAway, j);
+
+      // Ajuste Dixon-Coles apenas para placares baixos
+      if (i === 0 && j === 0) {
+        p *= (1 - (lambdaHome * lambdaAway * rho));
+      }
+
+      if (i === 0 && j === 1) {
+        p *= (1 + (lambdaHome * rho));
+      }
+
+      if (i === 1 && j === 0) {
+        p *= (1 + (lambdaAway * rho));
+      }
+
+      if (i === 1 && j === 1) {
+        p *= (1 - rho);
+      }
 
       matrix.push({
         score: `${i}x${j}`,
