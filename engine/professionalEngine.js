@@ -1,9 +1,5 @@
 //////////////////////////////////////////////
-// GOLBETPRO ELITE ENGINE 2.0 PROFISSIONAL
-//////////////////////////////////////////////
-
-//////////////////////////////////////////////
-// GOLBETPRO ELITE ENGINE 2.0 PROFISSIONAL
+// GOLBETPRO ELITE ENGINE 2.1 PROFISSIONAL
 //////////////////////////////////////////////
 
 function factorial(n) {
@@ -24,31 +20,17 @@ function safeNumber(n, fallback = 1) {
 
 function calcularElite(homeStats, awayStats, leagueAverage = 1.35) {
 
-  // PROTEÇÃO CONTRA HISTÓRICO VAZIO
-  const homeFeitos = safeNumber(homeStats?.feitos, leagueAverage);
-  const homeSofridos = safeNumber(homeStats?.sofridos, leagueAverage);
-  const awayFeitos = safeNumber(awayStats?.feitos, leagueAverage);
-  const awaySofridos = safeNumber(awayStats?.sofridos, leagueAverage);
+  ///////////////////////////////////////////////////////
+  // AGORA homeStats.feitos E awayStats.feitos JÁ SÃO xG
+  // NÃO FAZEMOS MAIS NORMALIZAÇÃO AQUI
+  ///////////////////////////////////////////////////////
 
-  // FORÇAS
-  const attackHome = homeFeitos / leagueAverage;
-  const attackAway = awayFeitos / leagueAverage;
+  let lambdaHome = safeNumber(homeStats?.feitos, leagueAverage);
+  let lambdaAway = safeNumber(awayStats?.feitos, leagueAverage);
 
-  const defenseHome = homeSofridos / leagueAverage;
-  const defenseAway = awaySofridos / leagueAverage;
-
-  // FATOR CASA REALISTA
-  const homeFactor = 1.12;
-
-  // LAMBDAS COM LIMITE MÍNIMO
-  let lambdaHome =
-    leagueAverage * attackHome * defenseAway * homeFactor;
-
-  let lambdaAway =
-    leagueAverage * attackAway * defenseHome;
-
-  lambdaHome = Math.max(0.2, safeNumber(lambdaHome, leagueAverage));
-  lambdaAway = Math.max(0.2, safeNumber(lambdaAway, leagueAverage));
+  // Limite mínimo para evitar distorção matemática
+  lambdaHome = Math.max(0.2, lambdaHome);
+  lambdaAway = Math.max(0.2, lambdaAway);
 
   let homeWin = 0;
   let draw = 0;
@@ -58,7 +40,10 @@ function calcularElite(homeStats, awayStats, leagueAverage = 1.35) {
 
   let matrix = [];
 
+  //////////////////////////////////////////
   // MATRIZ 0-6 GOLS
+  //////////////////////////////////////////
+
   for (let i = 0; i <= 6; i++) {
     for (let j = 0; j <= 6; j++) {
 
@@ -80,7 +65,10 @@ function calcularElite(homeStats, awayStats, leagueAverage = 1.35) {
     }
   }
 
-  // NORMALIZAÇÃO (garante 100%)
+  //////////////////////////////////////////
+  // NORMALIZAÇÃO 1X2
+  //////////////////////////////////////////
+
   const total1x2 = homeWin + draw + awayWin;
 
   homeWin /= total1x2;
@@ -91,6 +79,10 @@ function calcularElite(homeStats, awayStats, leagueAverage = 1.35) {
   btts = safeNumber(btts);
 
   matrix.sort((a, b) => b.probability - a.probability);
+
+  //////////////////////////////////////////
+  // RETORNO FINAL
+  //////////////////////////////////////////
 
   return {
     expectedGoals: (lambdaHome + lambdaAway).toFixed(2),
