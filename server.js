@@ -3,6 +3,7 @@ const fetch = require("node-fetch");
 const cors = require("cors");
 const calcularElite = require("./engine/professionalEngine");
 const calcularPoisson = require("./engine/poisonEngine");
+const oddsTracker = {};
 
 //////////////////////////////////////////////
 // SMART MONEY DETECTOR
@@ -838,6 +839,7 @@ app.get("/api/elite-trader", async (req, res) => {
 
             const probModelo = Number(m.prob) / 100;
             const alertaSmart = smartMoneyDetector(probModelo, m.odd);
+            const oddsMovimento = analyzeOddsMovement(game.fixture.id, m.nome, m.odd);
             const probImplicita = 1 / m.odd;
 
             const ev = (probModelo * m.odd) - 1;
@@ -900,6 +902,7 @@ app.get("/api/elite-trader", async (req, res) => {
               risco,
               alerta,
               smartMoney: alertaSmart,
+              oddsMovimento,
             });
 
           }
@@ -985,6 +988,44 @@ app.get("/api/super-picks", async (req, res) => {
   }
 
 });
+
+function analyzeOddsMovement(gameId, market, oddAtual){
+
+  const key = gameId + "_" + market;
+
+  if(!oddsTracker[key]){
+    oddsTracker[key] = {
+      firstOdd: oddAtual,
+      lastOdd: oddAtual,
+      drops: 0
+    };
+    return null;
+  }
+
+  const data = oddsTracker[key];
+
+  if(oddAtual < data.lastOdd){
+    data.drops++;
+  }
+
+  const diff = data.firstOdd - oddAtual;
+
+  data.lastOdd = oddAtual;
+
+  if(diff > 0.20){
+    return "🚨 QUEDA FORTE DE ODD (SHARP MONEY)";
+  }
+
+  if(data.drops >= 3){
+    return "💰 DINHEIRO PROFISSIONAL ENTRANDO";
+  }
+
+  if(oddAtual > data.firstOdd + 0.30){
+    return "⚠️ POSSÍVEL ARMADILHA DA CASA";
+  }
+
+  return null;
+}
 
 
 
