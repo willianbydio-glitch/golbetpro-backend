@@ -5,6 +5,29 @@ const calcularElite = require("./engine/professionalEngine");
 const calcularPoisson = require("./engine/poisonEngine");
 
 //////////////////////////////////////////////
+// SMART MONEY DETECTOR
+//////////////////////////////////////////////
+
+function smartMoneyDetector(probModelo, odd) {
+
+  const probBook = 1 / odd;
+
+  const diferenca = probModelo - probBook;
+
+  let alerta = null;
+
+  if (diferenca > 0.08) {
+    alerta = "💰 DINHEIRO FORTE NO MERCADO";
+  }
+
+  if (diferenca < -0.05) {
+    alerta = "⚠️ POSSÍVEL ARMADILHA DA CASA";
+  }
+
+  return alerta;
+
+}
+//////////////////////////////////////////////
 // CONFIG API
 //////////////////////////////////////////////
 
