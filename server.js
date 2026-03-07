@@ -899,6 +899,7 @@ app.get("/api/elite-trader", async (req, res) => {
               stakeRecomendada: (kelly * 100).toFixed(2) + "%",
               risco,
               alerta
+              smartMoney: alertaSmart,
             });
 
           }
