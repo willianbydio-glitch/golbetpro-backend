@@ -903,6 +903,63 @@ app.get("/api/elite-trader", async (req, res) => {
 
 
 
+//////////////////////////////////////////////
+// SUPER PICKS IA
+//////////////////////////////////////////////
+
+app.get("/api/super-picks", async (req, res) => {
+
+  const { date } = req.query;
+
+  try {
+
+    const trader = await fetch(
+      `http://localhost:${PORT}/api/elite-trader?date=${date}`
+    );
+
+    const data = await trader.json();
+
+    if (!data.elitePicks) {
+      return res.json({ success: true, picks: [] });
+    }
+
+    let picks = data.elitePicks.map(p => {
+
+      const score = Number(p.traderScore);
+
+      let tier = "VALUE";
+
+      if (score > 0.16) tier = "🔥 SUPER VALUE";
+      else if (score > 0.12) tier = "⭐ ELITE PICK";
+
+      return {
+        ...p,
+        tier
+      };
+
+    });
+
+    picks.sort((a, b) => b.traderScore - a.traderScore);
+
+    res.json({
+      success: true,
+      total: picks.length,
+      superPicks: picks.slice(0, 10)
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      success: false
+    });
+
+  }
+
+});
+
+
 
 
 //////////////////////////////////////////////
