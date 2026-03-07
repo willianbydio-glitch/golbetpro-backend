@@ -901,37 +901,6 @@ app.get("/api/elite-trader", async (req, res) => {
 });
 
 
-function factorial(n) {
-    if (n === 0) return 1;
-    return n * factorial(n - 1);
-}
-
-function poisson(k, lambda) {
-    return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
-}
-
-function calcularOver25(xgHome, xgAway) {
-
-    let prob = 0;
-
-    for (let h = 0; h <= 6; h++) {
-        for (let a = 0; a <= 6; a++) {
-
-            let total = h + a;
-
-            if (total >= 3) {
-
-                let p =
-                    poisson(h, xgHome) *
-                    poisson(a, xgAway);
-
-                prob += p;
-            }
-        }
-    }
-
-    return prob;
-}
 
 
 
