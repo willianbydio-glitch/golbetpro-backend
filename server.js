@@ -819,9 +819,9 @@ app.get("/api/elite-trader", async (req, res) => {
             const ev = (probModelo * m.odd) - 1;
             const edge = probModelo - probImplicita;
 
-            if (ev < 0.03) continue;
-            if (probModelo < 0.52) continue;
-            if (m.odd < 1.40 || m.odd > 3.50) continue;
+            // Filtros mais flexíveis
+            if (probModelo < 0.45) continue;
+            if (m.odd < 1.30 || m.odd > 4.50) continue;
 
             const traderScore =
               (ev * 0.5) +
@@ -832,9 +832,11 @@ app.get("/api/elite-trader", async (req, res) => {
             // CLASSIFICAÇÃO
             //////////////////////////////////////////////////
 
-            let rating = "B";
-            if (traderScore > 0.12) rating = "A+";
-            else if (traderScore > 0.09) rating = "A";
+            let rating = "VALUE";
+
+            if (ev > 0.08) rating = "🔥 SUPER VALUE";
+            else if (ev > 0.05) rating = "⭐ ELITE PICK";
+            else if (ev > 0.02) rating = "✅ VALUE BET";
 
             //////////////////////////////////////////////////
             // KELLY 25%
