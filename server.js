@@ -837,6 +837,7 @@ app.get("/api/elite-trader", async (req, res) => {
             if (!m.odd) continue;
 
             const probModelo = Number(m.prob) / 100;
+            const alertaSmart = smartMoneyDetector(probModelo, m.odd);
             const probImplicita = 1 / m.odd;
 
             const ev = (probModelo * m.odd) - 1;
