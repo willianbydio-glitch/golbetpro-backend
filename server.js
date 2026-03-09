@@ -863,7 +863,6 @@ app.get("/api/elite-trader", async (req, res) => {
               (probModelo * 0.3) +
               (edge * 0.2);
             
-            const ultraSharp = ultraSharpDetector(probModelo, m.odd, ev, traderScore);
             // Filtros mais flexíveis
             if (probModelo < 0.45) continue;
             if (m.odd < 1.30 || m.odd > 4.50) continue;
@@ -872,6 +871,8 @@ app.get("/api/elite-trader", async (req, res) => {
               (ev * 0.5) +
               (probModelo * 0.3) +
               (edge * 0.2);
+            
+            const ultraSharp = ultraSharpDetector(probModelo, m.odd, ev, traderScore);
 
             //////////////////////////////////////////////////
             // CLASSIFICAÇÃO
@@ -932,11 +933,11 @@ app.get("/api/elite-trader", async (req, res) => {
         oportunidades.sort((a, b) => b.traderScore - a.traderScore);
 
         const top3IA = oportunidades.slice(0,3);
-
         return {
           success: true,
           total: oportunidades.length,
-          elitePicks: oportunidades.slice(0, 15)
+          elitePicks: oportunidades.slice(0, 15),
+          picksIA: top3IA
         };
 
       },
