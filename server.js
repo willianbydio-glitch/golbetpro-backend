@@ -766,6 +766,7 @@ app.get("/api/elite-trader", async (req, res) => {
           );
 
           const oddsData = await oddsResponse.json();
+          console.log("ODDS:", oddsData.response.length);
 
           if (!oddsData.response || oddsData.response.length === 0) continue;
 
