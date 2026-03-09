@@ -799,27 +799,15 @@ app.get("/api/jogos", async (req, res) => {
 
  try {
 
-  const response = await fetch(
-   `${BASE_URL}/fixtures?date=${date}`,
-   {
-    headers: { "x-apisports-key": API_KEY }
-   }
-  );
+  const response = await fetch(`${BASE_URL}/fixtures?date=${date}`);
 
   const data = await response.json();
 
-  res.json({
-   success: true,
-   total: data.response.length,
-   jogos: data.response
-  });
+  res.json(data);
 
  } catch (err) {
 
-  res.json({
-   success: false,
-   erro: err.message
-  });
+  res.json({ erro: err.message });
 
  }
 
