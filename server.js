@@ -854,6 +854,7 @@ app.get("/api/elite-trader", async (req, res) => {
 
             const probModelo = Number(m.prob) / 100;
             const alertaSmart = smartMoneyDetector(probModelo, m.odd);
+            const ultraSharp = ultraSharpDetector(probModelo, m.odd, ev, traderScore);
             const oddsMovimento = analyzeOddsMovement(game.fixture.id, m.nome, m.odd);
             const probImplicita = 1 / m.odd;
 
