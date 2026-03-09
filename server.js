@@ -928,6 +928,8 @@ app.get("/api/elite-trader", async (req, res) => {
 
         oportunidades.sort((a, b) => b.traderScore - a.traderScore);
 
+        const top3IA = oportunidades.slice(0,3);
+
         return {
           success: true,
           total: oportunidades.length,
@@ -989,9 +991,10 @@ app.get("/api/super-picks", async (req, res) => {
     picks.sort((a, b) => b.traderScore - a.traderScore);
 
     res.json({
-      success: true,
-      total: picks.length,
-      superPicks: picks.slice(0, 10)
+      success:true,
+      total:oportunidades.length,
+      superPicks:oportunidades,
+      picksIA:top3IA
     });
 
   } catch (err) {
