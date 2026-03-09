@@ -383,6 +383,7 @@ app.get("/api/estatisticas", async (req, res) => {
     );
 
     const data = await response.json();
+    console.log("TOTAL JOGOS:", data.response.length);
     res.json(data);
 
   } catch (err) {
@@ -766,11 +767,13 @@ app.get("/api/elite-trader", async (req, res) => {
           );
 
           const oddsData = await oddsResponse.json();
+          console.log("ODDS RESPONSE:", oddsData.response.length);
           console.log("ODDS:", oddsData.response.length);
 
           if (!oddsData.response || oddsData.response.length === 0) continue;
 
           const bookmaker = oddsData.response[0]?.bookmakers?.[0];
+          console.log("BOOKMAKER:", bookmaker ? "SIM" : "NAO");
           if (!bookmaker) continue;
 
           const markets = bookmaker.bets;
