@@ -788,6 +788,48 @@ res.json({
 
 }); // 👈 FECHA A ROTA ELITE
 
+
+//////////////////////////////////////////////
+// ENDPOINT JOGOS DO DIA
+//////////////////////////////////////////////
+
+app.get("/api/jogos", async (req, res) => {
+
+ const date = req.query.date;
+
+ try {
+
+  const response = await fetch(
+   `${BASE_URL}/fixtures?date=${date}`,
+   {
+    headers: { "x-apisports-key": API_KEY }
+   }
+  );
+
+  const data = await response.json();
+
+  res.json({
+   success: true,
+   total: data.response.length,
+   jogos: data.response
+  });
+
+ } catch (err) {
+
+  res.json({
+   success: false,
+   erro: err.message
+  });
+
+ }
+
+});
+
+//////////////////////////////////////////////
+// ELITE TRADER SCANNER
+//////////////////////////////////////////////
+
+app.get("/api/elite-trader", async (req, res) => {
 //////////////////////////////////////////////
 // ELITE TRADER SCANNER - SUPER ELITE HARD PRO MAX
 //////////////////////////////////////////////
