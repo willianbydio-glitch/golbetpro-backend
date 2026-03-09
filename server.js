@@ -32,17 +32,16 @@ function smartMoneyDetector(probModelo, odd) {
 function ultraSharpDetector(probModelo, odd, ev, traderScore){
 
   if(
-    probModelo > 0.65 &&
-    odd >= 1.70 &&
-    ev > 0.25 &&
-    traderScore > 0.45
+    probModelo > 0.60 &&
+    odd >= 1.60 &&
+    ev > 0.15 &&
+    traderScore > 0.30
   ){
     return "💎 ULTRA SHARP BET";
   }
 
   return null;
 }
-
 //////////////////////////////////////////////
 // CONFIG API
 //////////////////////////////////////////////
@@ -864,8 +863,8 @@ app.get("/api/elite-trader", async (req, res) => {
               (edge * 0.2);
             
             // Filtros mais flexíveis
-            if (probModelo < 0.45) continue;
-            if (m.odd < 1.30 || m.odd > 4.50) continue;
+            if (probModelo < 0.38) continue;
+            if (m.odd < 1.20 || m.odd > 6.00) continue;
 
 
             
