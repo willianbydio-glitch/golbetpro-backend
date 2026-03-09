@@ -5,6 +5,68 @@ const calcularElite = require("./engine/professionalEngine");
 const calcularPoisson = require("./engine/poisonEngine");
 const oddsTracker = {};
 
+//////////////////////////////////////////////
+// BANCO DE ODDS DO DIA (ELITE TRADER 5.0)
+//////////////////////////////////////////////
+
+let oddsDoDia = {};
+
+async function carregarOddsDoDia(date){
+
+  try{
+
+    const fixturesResponse = await fetch(
+      `${BASE_URL}/fixtures?date=${date}`,
+      {
+        headers: { "x-apisports-key": API_KEY }
+      }
+    );
+
+    const fixturesData = await fixturesResponse.json();
+
+    oddsDoDia = {};
+
+    if(!fixturesData.response) return;
+
+    for(const game of fixturesData.response){
+
+      const fixtureId = game.fixture.id;
+
+      try{
+
+        const oddsResponse = await fetch(
+          `${BASE_URL}/odds?fixture=${fixtureId}`,
+          {
+            headers: { "x-apisports-key": API_KEY }
+          }
+        );
+
+        const oddsData = await oddsResponse.json();
+
+        if(oddsData.response && oddsData.response.length > 0){
+
+          oddsDoDia[fixtureId] = oddsData.response[0];
+
+        }
+
+      }catch(err){
+
+        console.log("Erro odds fixture:", fixtureId);
+
+      }
+
+    }
+
+    console.log("ODDS CARREGADAS:", Object.keys(oddsDoDia).length);
+
+  }catch(err){
+
+    console.log("Erro carregar odds:", err);
+
+  }
+
+}
+
 /////////////////////////////////////////////
 // SMART MONEY DETECTOR
 //////////////////////////////////////////////
@@ -42,6 +104,21 @@ function ultraSharpDetector(probModelo, odd, ev, traderScore){
 
   return null;
 }
+
+function godModeDetector(probModelo, odd, ev, traderScore){
+
+  if(
+    probModelo > 0.68 &&
+    odd >= 1.80 &&
+    ev > 0.30 &&
+    traderScore > 0.50
+  ){
+    return "👑 GOD MODE BET";
+  }
+
+  return null;
+}
+
 //////////////////////////////////////////////
 // CONFIG API
 //////////////////////////////////////////////
@@ -718,6 +795,7 @@ res.json({
 app.get("/api/elite-trader", async (req, res) => {
 
   const { date, league } = req.query;
+  await carregarOddsDoDia(date);
 
   try {
 
@@ -761,22 +839,19 @@ app.get("/api/elite-trader", async (req, res) => {
           // BUSCAR ODDS
           //////////////////////////////////////////////////
 
-          const oddsResponse = await fetch(
-            `${BASE_URL}/odds?fixture=${fixtureId}`,
-            { headers: { "x-apisports-key": API_KEY } }
-          );
-
-          const oddsData = await oddsResponse.json();
+          const oddsData = oddsDoDia[fixtureId];
+          
+          if(!oddsData) continue;
+          
+          const bookmakers = oddsData.bookmakers;
+          
+          if(!bookmakers || bookmakers.length === 0) continue;
+          
+          const bookmaker = bookmakers[0];
+          
+          const markets = bookmaker.bets;
           console.log("ODDS RESPONSE:", oddsData.response.length);
           console.log("ODDS:", oddsData.response.length);
-
-          if (!oddsData.response || oddsData.response.length === 0) continue;
-
-          const bookmaker = oddsData.response[0]?.bookmakers?.[0];
-          console.log("BOOKMAKER:", bookmaker ? "SIM" : "NAO");
-          if (!bookmaker) continue;
-
-          const markets = bookmaker.bets;
 
           function pegarOdd(nomeMercado, valor) {
             const mercado = markets.find(m => m.name === nomeMercado);
@@ -874,6 +949,7 @@ app.get("/api/elite-trader", async (req, res) => {
             
             
             const ultraSharp = ultraSharpDetector(probModelo, m.odd, ev, traderScore);
+            const godMode = godModeDetector(probModelo, m.odd, ev, traderScore);
 
             //////////////////////////////////////////////////
             // CLASSIFICAÇÃO
@@ -925,6 +1001,8 @@ app.get("/api/elite-trader", async (req, res) => {
               smartMoney: alertaSmart,
               oddsMovimento,
               ultraSharp,
+              godMode,
+              
             });
 
           }
