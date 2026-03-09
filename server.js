@@ -789,36 +789,8 @@ res.json({
 }); // 👈 FECHA A ROTA ELITE
 
 
-//////////////////////////////////////////////
-// ENDPOINT JOGOS DO DIA
-//////////////////////////////////////////////
 
-app.get("/api/jogos", async (req, res) => {
-
- const date = req.query.date;
-
- try {
-
-  const response = await fetch(`${BASE_URL}/fixtures?date=${date}`);
-
-  const data = await response.json();
-
-  res.json(data);
-
- } catch (err) {
-
-  res.json({ erro: err.message });
-
- }
-
-});
-
-//////////////////////////////////////////////
-// ELITE TRADER SCANNER
-//////////////////////////////////////////////
-
-app.get("/api/elite-trader", async (req, res) => {
-//////////////////////////////////////////////
+/////////////////////////////////////////////
 // ELITE TRADER SCANNER - SUPER ELITE HARD PRO MAX
 //////////////////////////////////////////////
 
@@ -866,7 +838,7 @@ app.get("/api/elite-trader", async (req, res) => {
           const awayId = game.teams.away.id;
 
           //////////////////////////////////////////////////
-          // BUSCAR ODDS
+          // BUSCAR ODDSS
           //////////////////////////////////////////////////
 
           const oddsData = oddsDoDia[fixtureId];
@@ -880,8 +852,7 @@ app.get("/api/elite-trader", async (req, res) => {
           const bookmaker = bookmakers[0];
           
           const markets = bookmaker.bets;
-          console.log("ODDS RESPONSE:", oddsData.response.length);
-          console.log("ODDS:", oddsData.response.length);
+          console.log("ODDS CARREGADAS:", Object.keys(oddsDoDia).length);
 
           function pegarOdd(nomeMercado, valor) {
             const mercado = markets.find(m => m.name === nomeMercado);
@@ -1171,5 +1142,5 @@ function analyzeOddsMovement(gameId, market, oddAtual){
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
-  console.log(`Backend rodando na porta ${PORT}`);
+ console.log("Backend rodando na porta " + PORT);
 });
