@@ -867,10 +867,8 @@ app.get("/api/elite-trader", async (req, res) => {
             if (probModelo < 0.45) continue;
             if (m.odd < 1.30 || m.odd > 4.50) continue;
 
-            const traderScore =
-              (ev * 0.5) +
-              (probModelo * 0.3) +
-              (edge * 0.2);
+
+            
             
             const ultraSharp = ultraSharpDetector(probModelo, m.odd, ev, traderScore);
 
