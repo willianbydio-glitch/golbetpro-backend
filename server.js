@@ -1133,7 +1133,47 @@ function analyzeOddsMovement(gameId, market, oddAtual){
 }
 
 
+//////////////////////////////////////////////
+// PICKS IA (TOP 3 DO DIA)
+//////////////////////////////////////////////
 
+app.get("/api/picks-ia", async (req, res) => {
+
+  const { date } = req.query;
+
+  try {
+
+    const trader = await fetch(
+      `https://keen-grace-production.up.railway.app/api/elite-trader?date=${date}`
+    );
+
+    const data = await trader.json();
+
+    if (!data.elitePicks) {
+      return res.json({ success: true, picks: [] });
+    }
+
+    const picks = data.elitePicks
+      .sort((a,b) => b.traderScore - a.traderScore)
+      .slice(0,3);
+
+    res.json({
+      success: true,
+      total: picks.length,
+      picks
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      success:false
+    });
+
+  }
+
+});
 
 //////////////////////////////////////////////
 // START SERVER
