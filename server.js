@@ -28,6 +28,21 @@ function smartMoneyDetector(probModelo, odd) {
   return alerta;
 
 }
+
+function ultraSharpDetector(probModelo, odd, ev, traderScore){
+
+  if(
+    probModelo > 0.65 &&
+    odd >= 1.70 &&
+    ev > 0.25 &&
+    traderScore > 0.45
+  ){
+    return "💎 ULTRA SHARP BET";
+  }
+
+  return null;
+}
+
 //////////////////////////////////////////////
 // CONFIG API
 //////////////////////////////////////////////
