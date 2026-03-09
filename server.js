@@ -854,13 +854,16 @@ app.get("/api/elite-trader", async (req, res) => {
 
             const probModelo = Number(m.prob) / 100;
             const alertaSmart = smartMoneyDetector(probModelo, m.odd);
-            const ultraSharp = ultraSharpDetector(probModelo, m.odd, ev, traderScore);
             const oddsMovimento = analyzeOddsMovement(game.fixture.id, m.nome, m.odd);
             const probImplicita = 1 / m.odd;
-
             const ev = (probModelo * m.odd) - 1;
             const edge = probModelo - probImplicita;
-
+            const traderScore =
+              (ev * 0.5) +
+              (probModelo * 0.3) +
+              (edge * 0.2);
+            
+            const ultraSharp = ultraSharpDetector(probModelo, m.odd, ev, traderScore);
             // Filtros mais flexíveis
             if (probModelo < 0.45) continue;
             if (m.odd < 1.30 || m.odd > 4.50) continue;
@@ -990,10 +993,11 @@ app.get("/api/super-picks", async (req, res) => {
 
     picks.sort((a, b) => b.traderScore - a.traderScore);
 
+    const top3IA = picks.slice(0,3);
     res.json({
       success:true,
-      total:oportunidades.length,
-      superPicks:oportunidades,
+      total:picks.length,
+      superPicks:picks,
       picksIA:top3IA
     });
 
