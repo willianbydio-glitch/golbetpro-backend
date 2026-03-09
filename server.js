@@ -919,6 +919,7 @@ app.get("/api/elite-trader", async (req, res) => {
               alerta,
               smartMoney: alertaSmart,
               oddsMovimento,
+              ultraSharp,
             });
 
           }
