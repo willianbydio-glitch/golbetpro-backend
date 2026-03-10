@@ -878,7 +878,7 @@ app.get("/api/elite-trader", async (req, res) => {
         const historyCache = {};
         await Promise.all(data.response.map(async (game) => {
           
-          if (game.fixture.status.short !== "NS") continue;
+          if (game.fixture.status.short !== "NS") return;
           
           const fixtureId = game.fixture.id;
           const homeId = game.teams.home.id;
@@ -887,10 +887,10 @@ app.get("/api/elite-trader", async (req, res) => {
           
           const oddsData = oddsDoDia[fixtureId];
           
-          if(!oddsData) continue
+          if(!oddsData) return
             
           const bookmakers = oddsData.bookmakers;
-          if(!bookmakers || bookmakers.length === 0) continue;
+          if(!bookmakers || bookmakers.length === 0) return;
           const bookmaker = bookmakers[0];
           const markets = bookmaker.bets;
           function pegarOdd(nomeMercado, valor) {
@@ -900,7 +900,7 @@ app.get("/api/elite-trader", async (req, res) => {
             const opcao = mercado.values.find(v => v.value === valor);
             
             return opcao ? Number(opcao.odd) : null;
-          }));
+          }
           const oddHome = pegarOdd("Match Winner", "Home");
           const oddDraw = pegarOdd("Match Winner", "Draw");
           const oddAway = pegarOdd("Match Winner", "Away");
