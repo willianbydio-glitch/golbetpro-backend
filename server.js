@@ -1337,6 +1337,52 @@ app.get("/api/apostas-do-dia", async (req, res) => {
 });
 
 //////////////////////////////////////////////
+// TOP APOSTAS DO DIA
+//////////////////////////////////////////////
+
+app.get("/api/top-apostas", async (req, res) => {
+
+  try{
+
+    const date = new Date().toISOString().split("T")[0];
+
+    const trader = await fetch(
+      `https://keen-grace-production.up.railway.app/api/elite-trader?date=${date}`
+    );
+
+    const data = await trader.json();
+
+    if(!data.opportunities){
+      return res.json({
+        success:true,
+        total:0,
+        picks:[]
+      });
+    }
+
+    // ordenar pelas melhores
+    const melhores = data.opportunities
+      .sort((a,b)=>b.traderScore-a.traderScore)
+      .slice(0,10);
+
+    res.json({
+      success:true,
+      total:melhores.length,
+      picks:melhores
+    });
+
+  }catch(e){
+
+    res.json({
+      success:false,
+      erro:e.message
+    });
+
+  }
+
+});
+
+//////////////////////////////////////////////
 // START SERVER
 //////////////////////////////////////////////
 
