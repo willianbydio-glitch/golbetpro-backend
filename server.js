@@ -6,9 +6,9 @@ const calcularPoisson = require("./engine/poisonEngine");
 const oddsTracker = {};
 const teamHistoryCache = {};
 
-/////////////////////////////////////////////
-// BANCO DE ODDS DO DIA (ELITE TRADER 5.0)
-//////////////////////////////////////////////
+function probOdd(odd){
+  return (1 / odd) * 100;
+}
 
 let oddsDoDia = {};
 
