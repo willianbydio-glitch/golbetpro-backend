@@ -974,7 +974,7 @@ app.get("/api/elite-trader", async (req, res) => {
 
           for (let m of mercados) {
 
-            if (!m.odd) return;
+            if (!m.odd) continue;
 
             const probModelo = Number(m.prob);
             const analise = classificarAposta(probModelo, m.odd);
@@ -1055,7 +1055,7 @@ app.get("/api/elite-trader", async (req, res) => {
 
           }
 
-        }
+        })),
 
         oportunidades.sort((a, b) => b.traderScore - a.traderScore);
 
