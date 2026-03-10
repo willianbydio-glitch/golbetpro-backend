@@ -907,7 +907,7 @@ app.get("/api/elite-trader", async (req, res) => {
           const oddOver25 = pegarOdd("Goals Over/Under", "Over 2.5");
           const oddBTTS = pegarOdd("Both Teams Score", "Yes");
           
-          if (!oddHome && !oddOver25) continue;
+          if (!oddHome && !oddOver25) return;
 
   //////////////////////////////////////////////////
   // BUSCAR MÉDIAS DOS TIMES
@@ -974,7 +974,7 @@ app.get("/api/elite-trader", async (req, res) => {
 
           for (let m of mercados) {
 
-            if (!m.odd) continue;
+            if (!m.odd) return;
 
             const probModelo = Number(m.prob);
             const analise = classificarAposta(probModelo, m.odd);
@@ -984,15 +984,15 @@ app.get("/api/elite-trader", async (req, res) => {
             const prob = probModelo / 100;
             const ev = (prob * m.odd) - 1;
             const edge = prob - probImplicita;
-            if(edge < 0.002) continue;
+            if(edge < 0.002) return;
             const traderScore =
               (ev * 0.5) +
-              ((probModelo/100) * 0.3) +
+              ((probModelo/100) * 0.3) + 
               (edge * 0.2);
             
             // Filtros mais flexíveis
-            if (ev < 0.005) continue;
-            if (m.odd < 1.20 || m.odd > 6.00) continue;
+            if (ev < 0.005) return;
+            if (m.odd < 1.20 || m.odd > 6.00) return;
 
 
             
