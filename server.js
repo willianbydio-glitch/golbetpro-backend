@@ -982,7 +982,7 @@ app.get("/api/elite-trader", async (req, res) => {
             if(edge < 0.002) continue;
             const traderScore =
               (ev * 0.5) +
-              (probModelo * 0.3) +
+              ((probModelo/100) * 0.3) +
               (edge * 0.2);
             
             // Filtros mais flexíveis
@@ -1034,7 +1034,7 @@ app.get("/api/elite-trader", async (req, res) => {
               liga: game.league.name,
               mercado: m.nome,
               odd: m.odd,
-              probModelo: (probModelo * 100).toFixed(2),
+              probModelo: probModelo.toFixed(2),
               ev: analise.ev,
               edge: analise.edge,
               traderScore: traderScore.toFixed(4),
