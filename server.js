@@ -12,66 +12,51 @@ const teamHistoryCache = {};
 
 let oddsDoDia = {};
 
-async function carregarOddsDoDia(date){
-
-  try{
-
-    const fixturesResponse = await fetch(
-      `${BASE_URL}/fixtures?date=${date}`,
-      {
-        headers: { "x-apisports-key": API_KEY }
-      }
-    );
-
+async function carregarOddsDoDia(date) {
+  try {
+    const fixturesResponse = await fetch(`${BASE_URL}/fixtures?date=${date}`, {
+      headers: { "x-apisports-key": API_KEY }
+    });
     const fixturesData = await fixturesResponse.json();
-
+    
     oddsDoDia = {};
+    if (!fixturesData.response || fixturesData.response.length === 0) return;
 
-    if(!fixturesData.response) return;
-
-    // PEGAR IDS DOS JOGOS
     const fixtureIds = fixturesData.response.map(g => g.fixture.id);
 
-    // BUSCAR TODAS ODDS EM PARALELO
-    const oddsRequests = fixtureIds.map(async fixtureId => {
+    // Função para processar em lotes (evita bloqueio da API)
+    const chunkArray = (array, size) => {
+      const result = [];
+      for (let i = 0; i < array.length; i += size) result.push(array.slice(i, i + size));
+      return result;
+    };
 
-      try{
+    const lotes = chunkArray(fixtureIds, 10); // Lotes de 10 jogos por vez
 
-        const oddsResponse = await fetch(
-          `${BASE_URL}/odds?fixture=${fixtureId}`,
-          {
+    for (const lote of lotes) {
+      await Promise.all(lote.map(async (fixtureId) => {
+        try {
+          const oddsResponse = await fetch(`${BASE_URL}/odds?fixture=${fixtureId}`, {
             headers: { "x-apisports-key": API_KEY }
+          });
+          const oddsData = await oddsResponse.json();
+          if (oddsData.response?.length > 0) {
+            oddsDoDia[fixtureId] = oddsData.response[0];
           }
-        );
-
-        const oddsData = await oddsResponse.json();
-
-        if(oddsData.response && oddsData.response.length > 0){
-
-          oddsDoDia[fixtureId] = oddsData.response[0];
-
+        } catch (err) {
+          console.log("Erro no jogo:", fixtureId);
         }
+      }));
+      // Pequena pausa de 200ms entre lotes para manter a conexão estável
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
 
-      }catch(err){
-
-        console.log("Erro odds fixture:", fixtureId);
-
-      }
-
-    });
-
-    // AGUARDAR TODAS REQUISIÇÕES
-    await Promise.all(oddsRequests);
-
-    console.log("ODDS CARREGADAS:", Object.keys(oddsDoDia).length);
-
-  }catch(err){
-
-    console.log("Erro carregar odds:", err);
-
+    console.log("✅ ODDS CARREGADAS COM SUCESSO:", Object.keys(oddsDoDia).length);
+  } catch (err) {
+    console.log("Erro crítico ao carregar odds:", err);
   }
-
 }
+
 
 /////////////////////////////////////////////
 // SMART MONEY DETECTOR
