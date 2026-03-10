@@ -128,6 +128,71 @@ const API_KEY = process.env.API_FOOTBALL_KEY;
 
 const app = express();
 
+/////////////////////////////////////////////////
+// CALCULO VALUE BET
+/////////////////////////////////////////////////
+
+function calcularValueBet(probModelo, odd){
+
+ const prob = probModelo / 100;
+
+ const probCasa = 1 / odd;
+
+ const ev = (prob * odd) - 1;
+
+ const edge = probModelo - (probCasa * 100);
+
+ return {
+  probCasa: probCasa * 100,
+  ev: ev * 100,
+  edge: edge
+ };
+
+}
+
+
+/////////////////////////////////////////////////
+// CLASSIFICADOR
+/////////////////////////////////////////////////
+
+function classificarAposta(probModelo, odd){
+
+ const calc = calcularValueBet(probModelo, odd);
+
+ const ev = calc.ev;
+
+ let alerta = "";
+ let rating = "Normal";
+ let risco = "Médio";
+
+ if(ev >= 15){
+  alerta = "🔥 APOSTA MUITO FORTE";
+  rating = "Elite";
+  risco = "Baixo";
+ }
+
+ else if(ev >= 8){
+  alerta = "🚨 VALUE BET";
+  rating = "Muito Boa";
+  risco = "Médio";
+ }
+
+ else if(ev >= 4){
+  rating = "Boa";
+ }
+
+ return {
+  ev: calc.ev.toFixed(2),
+  edge: calc.edge.toFixed(2),
+  alerta,
+  rating,
+  risco
+ };
+
+}
+
+
+
 //////////////////////////////////////////////
 // ROTA RAIZ (ADICIONADA)
 //////////////////////////////////////////////
