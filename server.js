@@ -995,7 +995,7 @@ app.get("/api/elite-trader", async (req, res) => {
             const prob = probModelo / 100;
             const ev = (prob * m.odd) - 1;
             const edge = prob - probImplicita;
-            if(edge < 0.002) continue;
+            if(edge < -0.01) continue;
             const traderScore =
               (ev * 0.5) +
               ((probModelo/100) * 0.3) + 
@@ -1003,7 +1003,7 @@ app.get("/api/elite-trader", async (req, res) => {
             
             // Filtros mais flexíveis
             if (ev < 0.005) continue;
-            if (m.odd < 1.20 || m.odd > 6.00) return;
+            if (m.odd < 1.10 || m.odd > 10.00) return;
 
 
             
