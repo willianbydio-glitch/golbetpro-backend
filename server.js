@@ -1248,6 +1248,87 @@ function detectarApostaForte(pick){
 }
 
 
+
+//////////////////////////////////////////////
+// TOP APOSTAS DO DIA
+//////////////////////////////////////////////
+
+app.get("/api/apostas-do-dia", async (req, res) => {
+
+ const { date } = req.query;
+
+ try{
+
+  const response = await fetch(
+   `http://localhost:${PORT}/api/elite-trader?date=${date}`
+  );
+
+  const data = await response.json();
+
+  if(!data.elitePicks){
+   return res.json({success:true,picks:[]});
+  }
+
+  //////////////////////////////////////////////////
+  // FILTRAR APOSTAS MAIS SEGURAS
+  //////////////////////////////////////////////////
+
+  let picks = data.elitePicks.filter(p => {
+
+   const prob = Number(p.probModelo);
+   const odd = Number(p.odd);
+
+   if(prob < 60) return false;
+   if(odd < 1.40 || odd > 3.50) return false;
+
+   return true;
+
+  });
+
+  //////////////////////////////////////////////////
+  // RANKING
+  //////////////////////////////////////////////////
+
+  picks.sort((a,b) => {
+
+   const scoreA =
+    (Number(a.probModelo) * 0.6) +
+    (Number(a.ev) * 0.3) +
+    (Number(a.traderScore) * 100 * 0.1);
+
+   const scoreB =
+    (Number(b.probModelo) * 0.6) +
+    (Number(b.ev) * 0.3) +
+    (Number(b.traderScore) * 100 * 0.1);
+
+   return scoreB - scoreA;
+
+  });
+
+  //////////////////////////////////////////////////
+  // TOP 10
+  //////////////////////////////////////////////////
+
+  const top10 = picks.slice(0,10);
+
+  res.json({
+   success:true,
+   total:top10.length,
+   picks:top10
+  });
+
+ }catch(err){
+
+  console.error(err);
+
+  res.status(500).json({
+   success:false
+  });
+
+ }
+
+});
+
 //////////////////////////////////////////////
 // START SERVER
 //////////////////////////////////////////////
