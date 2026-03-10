@@ -877,51 +877,47 @@ app.get("/api/elite-trader", async (req, res) => {
 
         for (let game of data.response) {
 
-          if (game.fixture.status.short !== "NS") continue;
+  if (game.fixture.status.short !== "NS") continue;
 
-          
-          
+  const fixtureId = game.fixture.id;
+  const homeId = game.teams.home.id;
+  const awayId = game.teams.away.id;
 
+  //////////////////////////////////////////////////
+  // BUSCAR ODDS
+  //////////////////////////////////////////////////
 
+  const oddsData = oddsDoDia[fixtureId];
+
+  if(!oddsData) continue;
+
+  const bookmakers = oddsData.bookmakers;
+
+  if(!bookmakers || bookmakers.length === 0) continue;
+
+  const bookmaker = bookmakers[0];
+
+  const markets = bookmaker.bets;
+
+  function pegarOdd(nomeMercado, valor) {
+    const mercado = markets.find(m => m.name === nomeMercado);
+    if (!mercado) return null;
+
+    const opcao = mercado.values.find(v => v.value === valor);
+
+    return opcao ? Number(opcao.odd) : null;
+  }
+
+  const oddHome = pegarOdd("Match Winner", "Home");
+  const oddDraw = pegarOdd("Match Winner", "Draw");
+  const oddAway = pegarOdd("Match Winner", "Away");
+  const oddOver25 = pegarOdd("Goals Over/Under", "Over 2.5");
+  const oddBTTS = pegarOdd("Both Teams Score", "Yes");
+
+  if (!oddHome && !oddOver25) continue;
 
 }
-          
-          const fixtureId = game.fixture.id;
-          const homeId = game.teams.home.id;
-          const awayId = game.teams.away.id;
-
-          //////////////////////////////////////////////////
-          // BUSCAR ODDSS
-          //////////////////////////////////////////////////
-
-          const oddsData = oddsDoDia[fixtureId];
-          
-          if(!oddsData) continue;
-          
-          const bookmakers = oddsData.bookmakers;
-          
-          if(!bookmakers || bookmakers.length === 0) continue;
-          
-          if(!bookmakers || bookmakers.length === 0) continue;
-        const bookmaker = bookmakers[0];
-          
-          const markets = bookmaker.bets;
-          console.log("ODDS CARREGADAS:", Object.keys(oddsDoDia).length);
-
-          function pegarOdd(nomeMercado, valor) {
-            const mercado = markets.find(m => m.name === nomeMercado);
-            if (!mercado) return null;
-            const opcao = mercado.values.find(v => v.value === valor);
-            return opcao ? Number(opcao.odd) : null;
-          }
-
-          const oddHome = pegarOdd("Match Winner", "Home");
-          const oddDraw = pegarOdd("Match Winner", "Draw");
-          const oddAway = pegarOdd("Match Winner", "Away");
-          const oddOver25 = pegarOdd("Goals Over/Under", "Over 2.5");
-          const oddBTTS = pegarOdd("Both Teams Score", "Yes");
-
-          if (!oddHome && !oddOver25) continue;
+        
 
           //////////////////////////////////////////////////
           // BUSCAR MÉDIAS DOS TIMES
