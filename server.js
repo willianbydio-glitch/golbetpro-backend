@@ -514,9 +514,6 @@ app.get("/api/estatisticas", async (req, res) => {
   }
 });
 
-//////////////////////////////////////////////
-// PROGNÓSTICO ELITE PROFISSIONAL (CORRIGIDO)
-//////////////////////////////////////////////
 
 //////////////////////////////////////////////
 // PROGNÓSTICO ELITE PROFISSIONAL (COM FORMA RECENTE 70/30)
@@ -843,7 +840,9 @@ res.json({
 app.get("/api/elite-trader", async (req, res) => {
 
   const { date, league } = req.query;
-  await carregarOddsDoDia(date);
+  if(Object.keys(oddsDoDia).length === 0){
+    await carregarOddsDoDia(date);
+  }
   console.log("TOTAL ODDS CARREGADAS:", Object.keys(oddsDoDia).length);
 
   try {
@@ -883,16 +882,7 @@ app.get("/api/elite-trader", async (req, res) => {
           
           
 
-    // AGUARDAR TODAS REQUISIÇÕES
-    await Promise.all(oddsRequests);
 
-    console.log("ODDS CARREGADAS:", Object.keys(oddsDoDia).length);
-
-  }catch(err){
-
-    console.log("Erro carregar odds:", err);
-
-  }
 
 }
           
@@ -912,7 +902,8 @@ app.get("/api/elite-trader", async (req, res) => {
           
           if(!bookmakers || bookmakers.length === 0) continue;
           
-          const bookmaker = bookmakers[0];
+          if(!bookmakers || bookmakers.length === 0) continue;
+        const bookmaker = bookmakers[0];
           
           const markets = bookmaker.bets;
           console.log("ODDS CARREGADAS:", Object.keys(oddsDoDia).length);
@@ -937,8 +928,10 @@ app.get("/api/elite-trader", async (req, res) => {
           //////////////////////////////////////////////////
 
           
-          const homeHistory = await fetchHistoryStats(homeId);
-          const awayHistory = await fetchHistoryStats(awayId);
+        const [homeHistory, awayHistory] = await Promise.all([
+          fetchHistoryStats(homeId),
+          fetchHistoryStats(awayId)
+        ]);
 
           function media(jogos, id) {
             if (!jogos || jogos.length === 0)
@@ -995,21 +988,22 @@ app.get("/api/elite-trader", async (req, res) => {
 
             if (!m.odd) continue;
 
-            const probModelo = Number(m.prob) / 100;
-            const analise = classificarAposta(probModelo * 100, m.odd);
+            const probModelo = Number(m.prob);
+            const analise = classificarAposta(probModelo, m.odd);
             const alertaSmart = smartMoneyDetector(probModelo, m.odd);
             const oddsMovimento = analyzeOddsMovement(game.fixture.id, m.nome, m.odd);
             const probImplicita = 1 / m.odd;
-            const ev = (probModelo * m.odd) - 1;
-            const edge = probModelo - probImplicita;
-            if(edge < 0.005) continue;
+            const prob = probModelo / 100;
+            const ev = (prob * m.odd) - 1;
+            const edge = prob - probImplicita;
+            if(edge < 0.002) continue;
             const traderScore =
               (ev * 0.5) +
               (probModelo * 0.3) +
               (edge * 0.2);
             
             // Filtros mais flexíveis
-            if (ev < 0.01) continue;
+            if (ev < 0.005) continue;
             if (m.odd < 1.20 || m.odd > 6.00) continue;
 
 
