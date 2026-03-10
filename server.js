@@ -4,6 +4,7 @@ const cors = require("cors");
 const calcularElite = require("./engine/professionalEngine");
 const calcularPoisson = require("./engine/poisonEngine");
 const oddsTracker = {};
+const teamHistoryCache = {};
 
 /////////////////////////////////////////////
 // BANCO DE ODDS DO DIA (ELITE TRADER 5.0)
@@ -233,7 +234,7 @@ async function adaptiveEngine(key, callback, ttl = 60000) {
 //////////////////////////////////////////////
 // HISTÓRICO
 //////////////////////////////////////////////
-const teamHistoryCache = {};
+
 
 async function fetchHistoryStats(teamId){
 
