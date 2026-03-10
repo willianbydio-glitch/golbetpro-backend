@@ -839,7 +839,11 @@ res.json({
 
 app.get("/api/elite-trader", async (req, res) => {
 
-  const { date, league } = req.query;
+  let { date, league } = req.query;
+  
+  if(!date){
+    date = new Date().toISOString().split("T")[0];
+  }
   if(Object.keys(oddsDoDia).length === 0){
     await carregarOddsDoDia(date);
   }
