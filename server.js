@@ -1175,6 +1175,40 @@ app.get("/api/picks-ia", async (req, res) => {
 
 });
 
+function detectarApostaForte(pick){
+
+ const prob = pick.probModelo;
+ const odd = pick.odd;
+
+ // Valor esperado
+ const ev = (prob/100 * odd - 1) * 100;
+
+ let alerta = "NORMAL";
+
+ if(prob >= 75 && ev >= 10){
+  alerta = "🔥 APOSTA MUITO FORTE";
+ }
+ else if(prob >= 65 && ev >= 5){
+  alerta = "🚨 APOSTA DE VALOR";
+ }
+
+ return {
+  ...pick,
+  ev: ev.toFixed(2),
+  alerta
+ };
+
+}
+
+const picksComAnalise = picks.map(detectarApostaForte);
+
+res.json({
+ success:true,
+ total:picksComAnalise.length,
+ picks:picksComAnalise
+});
+
+
 //////////////////////////////////////////////
 // START SERVER
 //////////////////////////////////////////////
