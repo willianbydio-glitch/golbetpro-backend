@@ -29,9 +29,11 @@ async function carregarOddsDoDia(date){
 
     if(!fixturesData.response) return;
 
-    for(const game of fixturesData.response){
+    // PEGAR IDS DOS JOGOS
+    const fixtureIds = fixturesData.response.map(g => g.fixture.id);
 
-      const fixtureId = game.fixture.id;
+    // BUSCAR TODAS ODDS EM PARALELO
+    const oddsRequests = fixtureIds.map(async fixtureId => {
 
       try{
 
@@ -56,7 +58,10 @@ async function carregarOddsDoDia(date){
 
       }
 
-    }
+    });
+
+    // AGUARDAR TODAS REQUISIÇÕES
+    await Promise.all(oddsRequests);
 
     console.log("ODDS CARREGADAS:", Object.keys(oddsDoDia).length);
 
