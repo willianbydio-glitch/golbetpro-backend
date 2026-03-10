@@ -233,6 +233,7 @@ async function adaptiveEngine(key, callback, ttl = 60000) {
 //////////////////////////////////////////////
 // HISTÓRICO
 //////////////////////////////////////////////
+const teamHistoryCache = {};
 
 async function fetchHistoryStats(teamId){
 
@@ -888,6 +889,68 @@ app.get("/api/elite-trader", async (req, res) => {
 
           if (game.fixture.status.short !== "NS") continue;
 
+          
+          async function carregarOddsDoDia(date){
+
+  try{
+
+    const fixturesResponse = await fetch(
+      `${BASE_URL}/fixtures?date=${date}`,
+      {
+        headers: { "x-apisports-key": API_KEY }
+      }
+    );
+
+    const fixturesData = await fixturesResponse.json();
+
+    oddsDoDia = {};
+
+    if(!fixturesData.response) return;
+
+    // PEGAR IDS DOS JOGOS
+    const fixtureIds = fixturesData.response.map(g => g.fixture.id);
+
+    // BUSCAR TODAS ODDS EM PARALELO
+    const oddsRequests = fixtureIds.map(async fixtureId => {
+
+      try{
+
+        const oddsResponse = await fetch(
+          `${BASE_URL}/odds?fixture=${fixtureId}`,
+          {
+            headers: { "x-apisports-key": API_KEY }
+          }
+        );
+
+        const oddsData = await oddsResponse.json();
+
+        if(oddsData.response && oddsData.response.length > 0){
+
+          oddsDoDia[fixtureId] = oddsData.response[0];
+
+        }
+
+      }catch(err){
+
+        console.log("Erro odds fixture:", fixtureId);
+
+      }
+
+    });
+
+    // AGUARDAR TODAS REQUISIÇÕES
+    await Promise.all(oddsRequests);
+
+    console.log("ODDS CARREGADAS:", Object.keys(oddsDoDia).length);
+
+  }catch(err){
+
+    console.log("Erro carregar odds:", err);
+
+  }
+
+}
+          
           const fixtureId = game.fixture.id;
           const homeId = game.teams.home.id;
           const awayId = game.teams.away.id;
@@ -928,7 +991,7 @@ app.get("/api/elite-trader", async (req, res) => {
           // BUSCAR MÉDIAS DOS TIMES
           //////////////////////////////////////////////////
 
-          const teamHistoryCache = {}; 
+          
           const homeHistory = await fetchHistoryStats(homeId);
           const awayHistory = await fetchHistoryStats(awayId);
 
@@ -994,7 +1057,7 @@ app.get("/api/elite-trader", async (req, res) => {
             const probImplicita = 1 / m.odd;
             const ev = (probModelo * m.odd) - 1;
             const edge = probModelo - probImplicita;
-            if(edge < 0.01) continue;
+            if(edge < 0.005) continue;
             const traderScore =
               (ev * 0.5) +
               (probModelo * 0.3) +
