@@ -1094,7 +1094,7 @@ app.get("/api/super-picks", async (req, res) => {
   try {
 
     const trader = await fetch(
-      `http://localhost:${PORT}/api/elite-trader?date=${date}`
+      `https://keen-grace-production.up.railway.app/api/elite-trader`
     );
 
     const data = await trader.json();
@@ -1260,7 +1260,7 @@ app.get("/api/apostas-do-dia", async (req, res) => {
  try{
 
   const response = await fetch(
-   `http://localhost:${PORT}/api/elite-trader?date=${date}`
+   `https://keen-grace-production.up.railway.app/api/elite-trader`
   );
 
   const data = await response.json();
