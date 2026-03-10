@@ -1101,7 +1101,7 @@ app.get("/api/super-picks", async (req, res) => {
   try {
 
     const trader = await fetch(
-      `https://keen-grace-production.up.railway.app/api/elite-trader`
+      `https://keen-grace-production.up.railway.app/api/elite-trader?date=${date}`
     );
 
     const data = await trader.json();
@@ -1267,7 +1267,7 @@ app.get("/api/apostas-do-dia", async (req, res) => {
  try{
 
   const response = await fetch(
-   `https://keen-grace-production.up.railway.app/api/elite-trader`
+   `https://keen-grace-production.up.railway.app/api/elite-trader?date=${date}`
   );
 
   const data = await response.json();
@@ -1352,7 +1352,7 @@ app.get("/api/top-apostas", async (req, res) => {
 
     const data = await trader.json();
 
-    if(!data.opportunities){
+    if(!data.elitePicks){
       return res.json({
         success:true,
         total:0,
@@ -1361,7 +1361,7 @@ app.get("/api/top-apostas", async (req, res) => {
     }
 
     // ordenar pelas melhores
-    const melhores = data.opportunities
+    const melhores = data.elitePicks
       .sort((a,b)=>b.traderScore-a.traderScore)
       .slice(0,10);
 
