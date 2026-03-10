@@ -878,7 +878,14 @@ app.get("/api/elite-trader", async (req, res) => {
         const historyCache = {};
         await Promise.all(data.response.map(async (game) => {
           
-          if (game.fixture.status.short !== "NS") return;
+          const status = game.fixture.status.short;
+          if(
+            status !== "NS" &&
+            status !== "LIVE" &&
+            status !== "1H" &&
+            status !== "2H" &&
+            status !== "HT"
+          ) return;
           
           const fixtureId = game.fixture.id;
           const homeId = game.teams.home.id;
@@ -974,7 +981,7 @@ app.get("/api/elite-trader", async (req, res) => {
 
           for (let m of mercados) {
 
-            if (!m.odd) continue;
+            if(!m.odd || m.odd <= 1) continue;
 
             const probModelo = Number(m.prob);
             const analise = classificarAposta(probModelo, m.odd);
@@ -988,7 +995,7 @@ app.get("/api/elite-trader", async (req, res) => {
             const traderScore =
               (ev * 0.5) +
               ((probModelo/100) * 0.3) + 
-              (edge * 0.2);
+              (edge * 0.005);
             
             // Filtros mais flexíveis
             if (ev < 0.005) return;
