@@ -875,7 +875,8 @@ app.get("/api/elite-trader", async (req, res) => {
         // LOOP EM TODOS OS JOGOS
         //////////////////////////////////////////////////
 
-        for (let game of data.response) {
+        const historyCache = {};
+        await Promise.all(data.response.map(async (game) => {
           
           if (game.fixture.status.short !== "NS") continue;
           
@@ -899,7 +900,7 @@ app.get("/api/elite-trader", async (req, res) => {
             const opcao = mercado.values.find(v => v.value === valor);
             
             return opcao ? Number(opcao.odd) : null;
-          }
+          }));
           const oddHome = pegarOdd("Match Winner", "Home");
           const oddDraw = pegarOdd("Match Winner", "Draw");
           const oddAway = pegarOdd("Match Winner", "Away");
@@ -911,10 +912,14 @@ app.get("/api/elite-trader", async (req, res) => {
   //////////////////////////////////////////////////
   // BUSCAR MÉDIAS DOS TIMES
   //////////////////////////////////////////////////
-          const [homeHistory, awayHistory] = await Promise.all([
-    fetchHistoryStats(homeId),
-    fetchHistoryStats(awayId)
-          ]);
+          if(!historyCache[homeId]){
+            historyCache[homeId] = fetchHistoryStats(homeId);
+          }
+          if(!historyCache[awayId]){
+            historyCache[awayId] = fetchHistoryStats(awayId);
+          }
+          const homeHistory = await historyCache[homeId];
+          const awayHistory = await historyCache[awayId];
 
           function media(jogos, id) {
             if (!jogos || jogos.length === 0)
