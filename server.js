@@ -182,12 +182,12 @@ function classificarAposta(probModelo, odd){
  }
 
  return {
-  ev: calc.ev.toFixed(2),
-  edge: calc.edge.toFixed(2),
+  ev: calc.ev,
+  edge: calc.edge,
   alerta,
   rating,
   risco
- };
+};
 
 }
 
@@ -234,41 +234,30 @@ async function adaptiveEngine(key, callback, ttl = 60000) {
 // HISTÓRICO
 //////////////////////////////////////////////
 
-async function fetchHistoryStats(teamId) {
-  try {
+async function fetchHistoryStats(teamId){
 
-    if (!teamId) return [];
+ if(teamHistoryCache[teamId]){
+   return teamHistoryCache[teamId];
+ }
 
-    let response = await fetch(
-      `${BASE_URL}/fixtures?team=${teamId}&last=5&status=FT`,
-      { headers: { "x-apisports-key": API_KEY } }
-    );
+ try{
 
-    let data = await response.json();
+   const response = await fetch(
+     `${BASE_URL}/fixtures?team=${teamId}&last=5&status=FT`,
+     { headers: { "x-apisports-key": API_KEY } }
+   );
 
-    if (data.response && data.response.length >= 3) {
-      return data.response;
-    }
+   const data = await response.json();
 
-    response = await fetch(
-      `${BASE_URL}/fixtures?team=${teamId}&last=10`,
-      { headers: { "x-apisports-key": API_KEY } }
-    );
+   teamHistoryCache[teamId] = data.response || [];
 
-    data = await response.json();
+   return teamHistoryCache[teamId];
 
-    if (data.response && data.response.length > 0) {
-      return data.response;
-    }
+ }catch(err){
+   return [];
+ }
 
-    return [];
-
-  } catch (err) {
-    console.error("Erro fetchHistoryStats:", err);
-    return [];
-  }
 }
-
 //////////////////////////////////////////////
 // PROGNÓSTICO ESTATÍSTICO
 //////////////////////////////////////////////
@@ -863,6 +852,7 @@ app.get("/api/elite-trader", async (req, res) => {
 
   const { date, league } = req.query;
   await carregarOddsDoDia(date);
+  console.log("TOTAL ODDS CARREGADAS:", Object.keys(oddsDoDia).length);
 
   try {
 
@@ -938,6 +928,7 @@ app.get("/api/elite-trader", async (req, res) => {
           // BUSCAR MÉDIAS DOS TIMES
           //////////////////////////////////////////////////
 
+          const teamHistoryCache = {}; 
           const homeHistory = await fetchHistoryStats(homeId);
           const awayHistory = await fetchHistoryStats(awayId);
 
@@ -997,18 +988,20 @@ app.get("/api/elite-trader", async (req, res) => {
             if (!m.odd) continue;
 
             const probModelo = Number(m.prob) / 100;
+            const analise = classificarAposta(probModelo * 100, m.odd);
             const alertaSmart = smartMoneyDetector(probModelo, m.odd);
             const oddsMovimento = analyzeOddsMovement(game.fixture.id, m.nome, m.odd);
             const probImplicita = 1 / m.odd;
             const ev = (probModelo * m.odd) - 1;
             const edge = probModelo - probImplicita;
+            if(edge < 0.01) continue;
             const traderScore =
               (ev * 0.5) +
               (probModelo * 0.3) +
               (edge * 0.2);
             
             // Filtros mais flexíveis
-            if (probModelo < 0.38) continue;
+            if (ev < 0.01) continue;
             if (m.odd < 1.20 || m.odd > 6.00) continue;
 
 
@@ -1050,25 +1043,24 @@ app.get("/api/elite-trader", async (req, res) => {
             if (ev > 0.08 && probModelo > 0.60 && edge > 0.05) {
               alerta = "🔥 ULTRA VALUE";
             }
-
+            
             oportunidades.push({
               jogo: `${game.teams.home.name} x ${game.teams.away.name}`,
               liga: game.league.name,
               mercado: m.nome,
               odd: m.odd,
               probModelo: (probModelo * 100).toFixed(2),
-              ev: (ev * 100).toFixed(2),
-              edge: (edge * 100).toFixed(2),
+              ev: analise.ev,
+              edge: analise.edge,
               traderScore: traderScore.toFixed(4),
-              rating,
+              rating: analise.rating,
               stakeRecomendada: (kelly * 100).toFixed(2) + "%",
-              risco,
-              alerta,
+              risco: analise.risco,
+              alerta: analise.alerta,
               smartMoney: alertaSmart,
               oddsMovimento,
               ultraSharp,
               godMode,
-              
             });
 
           }
@@ -1264,14 +1256,6 @@ function detectarApostaForte(pick){
  };
 
 }
-
-const picksComAnalise = picks.map(detectarApostaForte);
-
-res.json({
- success:true,
- total:picksComAnalise.length,
- picks:picksComAnalise
-});
 
 
 //////////////////////////////////////////////
