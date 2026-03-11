@@ -5,6 +5,8 @@ const calcularElite = require("./engine/professionalEngine");
 const calcularPoisson = require("./engine/poisonEngine");
 const oddsTracker = {};
 const teamHistoryCache = {};
+const app = express();
+
 
 
 /////////////////////////////////////////////////
