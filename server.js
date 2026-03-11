@@ -1118,6 +1118,19 @@ app.get("/api/elite-trader", async (req, res) => {
             
             let probModelo = Number(m.prob);
 
+
+            const probMercado = (1 / m.odd) * 100;
+            // mistura modelo + mercado
+
+            probModelo = (probModelo * 0.6) + (probMercado * 0.4);
+            // evitar probabilidade absurda
+            if(probModelo > 70) probModelo = 70;
+            if(probModelo < 8) probModelo = 8;
+
+            // limites realistas
+            if(probModelo > 75) probModelo = 75;
+            if(probModelo < 5) probModelo = 5;
+
   // ajuste força do time apenas para resultado
             if(mercadoResultado){
               if(m.nome === "Home Win"){
@@ -1129,12 +1142,26 @@ app.get("/api/elite-trader", async (req, res) => {
             }
 
   // bloqueio zebra absurda
-            if(mercadoResultado && m.nome === "Away Win" && diffRating > 12 && m.odd > 6){
+            // bloqueio zebra absurda
+            if(mercadoResultado &&
+               m.nome === "Away Win" &&
+               diffRating > 10 &&
+               m.odd > 4
+            ){
+              continue;
+            }
+
+            // favorito não pode ter odd absurda
+            if(mercadoResultado &&
+               m.nome === "Home Win" &&
+               diffRating > 12 &&
+               m.odd > 3.5
+            ){
               continue;
             }
 
   // força da liga
-            probModelo = probModelo * (1 + (ligaPeso - 1) * 0.3);
+            probModelo = probModelo * (1 + (ligaPeso - 1) * 0.5);
 
   // filtros odds irreais
             if(m.odd > 10 && probModelo > 20) continue;
@@ -1142,6 +1169,12 @@ app.get("/api/elite-trader", async (req, res) => {
 
             if(probModelo > 75) probModelo = 75;
             if(probModelo < 10) probModelo = 10;
+            // filtro odds irreais
+            if(m.odd > 4 && probModelo > 35) continue;
+
+            if(m.odd > 6 && probModelo > 25) continue;
+
+            if(m.odd > 10 && probModelo > 15) continue;
 
   
             const analise = classificarAposta(probModelo, m.odd);
@@ -1151,6 +1184,11 @@ app.get("/api/elite-trader", async (req, res) => {
             const probImplicita = 1 / m.odd;
             const prob = probModelo / 100;
             const ev = ((prob * m.odd) - 1) * 100;
+            // EV máximo realista
+            // limite EV irreal
+            if(ev > 40) continue;
+            if(ev > 35) continue;
+            
             const edge = prob - probImplicita;
             if(edge < -0.10) continue;
             const traderScore =
@@ -1180,14 +1218,20 @@ app.get("/api/elite-trader", async (req, res) => {
             if (ev > 0.08) rating = "🔥 SUPER VALUE";
             else if (ev > 0.05) rating = "⭐ ELITE PICK";
             else if (ev > 0.02) rating = "✅ VALUE BET";
-
-            //////////////////////////////////////////////////
-            // KELLY 25%
-            //////////////////////////////////////////////////
-
-            let kelly = ((probModelo * m.odd - 1) / (m.odd - 1));
+//////////////////////////////////////////////////
+// KELLY CORRIGIDO
+//////////////////////////////////////////////////
+            const probDecimal = probModelo / 100;
+            
+            let kelly = ((probDecimal * m.odd) - 1) / (m.odd - 1);
+            
             kelly = Math.max(0, kelly) * 0.25;
 
+// limitar stake
+            if(kelly > 0.05) kelly = 0.05;
+            if(kelly < 0.01) kelly = 0.01;
+            
+            
             //////////////////////////////////////////////////
             // RISCO
             //////////////////////////////////////////////////
@@ -1204,6 +1248,9 @@ app.get("/api/elite-trader", async (req, res) => {
             if (ev > 0.08 && probModelo > 0.60 && edge > 0.05) {
               alerta = "🔥 ULTRA VALUE";
             }
+
+            // evitar picks ruins
+            if(probModelo < 15) continue;
             
             oportunidades.push({
               jogo: `${game.teams.home.name} x ${game.teams.away.name}`,
