@@ -82,6 +82,47 @@ async function carregarOddsDoDia(date) {
   }
 }
 
+app.get("/api/aposta-dia", async (req,res)=>{
+
+  try{
+
+    const picks = await calcularEliteTrader();
+
+    if(!picks || picks.length===0){
+      return res.json({success:false});
+    }
+
+    const melhor = picks.sort((a,b)=>b.traderScore-a.traderScore)[0];
+
+    res.json({
+      success:true,
+      pick:melhor
+    });
+
+  }catch(e){
+
+    res.json({success:false});
+
+  }
+
+});
+
+
+function detectarSharpMoney(oddInicial, oddAtual){
+
+  if(!oddInicial || !oddAtual) return null;
+
+  const movimento = oddInicial - oddAtual;
+
+  if(movimento > 0.15){
+
+    return "💰 SHARP MONEY DETECTADO";
+
+  }
+
+  return null;
+
+}
 
 /////////////////////////////////////////////
 // SMART MONEY DETECTOR
@@ -628,6 +669,24 @@ app.get("/api/prognostico-elite", async (req, res) => {
       }
     }
 
+    function detectarMovimentoOdds(oddInicial, oddAtual){
+
+  if(!oddInicial || !oddAtual) return null;
+
+  const diff = oddInicial - oddAtual;
+
+  if(diff > 0.20){
+    return "📉 Odds caindo forte";
+  }
+
+  if(diff < -0.20){
+    return "📈 Odds subindo";
+  }
+
+  return null;
+
+}
+
     //////////////////////////////////////////
     // FUNÇÃO MÉDIA TEMPORADA
     //////////////////////////////////////////
@@ -1099,6 +1158,7 @@ app.get("/api/elite-trader", async (req, res) => {
               oddsMovimento,
               ultraSharp,
               godMode,
+              sharpMoney: sharp,
             });
 
           }
