@@ -1035,7 +1035,7 @@ app.get("/api/elite-trader", async (req, res) => {
           const oddAway = pegarOdd("Match Winner", "Away");
           const oddOver25 = pegarOdd("Goals Over/Under", "Over 2.5");
           const oddBTTS = pegarOdd("Both Teams Score", "Yes");
-          const sharp = detectarSharpMoney(oddsTracker[fixtureId]?.firstOdd,m.odd);
+          
           const ligaPeso = leagueStrength(game.league.name);probModelo = probModelo * ligaPeso;
           
           if (!oddHome && !oddOver25) return;
@@ -1115,6 +1115,7 @@ app.get("/api/elite-trader", async (req, res) => {
             if(probModelo < 5) probModelo = 5;
             const analise = classificarAposta(probModelo, m.odd);
             const alertaSmart = smartMoneyDetector(probModelo, m.odd);
+            const sharp = detectarSharpMoney(oddsTracker[fixtureId]?.firstOdd,m.odd);
             const oddsMovimento = analyzeOddsMovement(game.fixture.id, m.nome, m.odd);
             const probImplicita = 1 / m.odd;
             const prob = probModelo / 100;
