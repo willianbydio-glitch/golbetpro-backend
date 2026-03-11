@@ -110,7 +110,7 @@ app.get("/api/aposta-dia", async (req,res)=>{
     const date = new Date().toISOString().split("T")[0];
 
     const response = await fetch(
-      `http://localhost:${PORT}/api/elite-trader?date=${date}`
+      `https://keen-grace-production.up.railway.app/api/elite-trader?date=${date}`
     );
 
     const data = await response.json();
@@ -1036,7 +1036,7 @@ app.get("/api/elite-trader", async (req, res) => {
           const oddOver25 = pegarOdd("Goals Over/Under", "Over 2.5");
           const oddBTTS = pegarOdd("Both Teams Score", "Yes");
           
-          const ligaPeso = leagueStrength(game.league.name);probModelo = probModelo * ligaPeso;
+          const ligaPeso = leagueStrength(game.league.name);
           
           if (!oddHome && !oddOver25) return;
 
@@ -1110,6 +1110,8 @@ app.get("/api/elite-trader", async (req, res) => {
             let probModelo = Number(m.prob);
             // ajuste força do time
             probModelo += diffRating * 0.4;
+
+            probModelo = probModelo * ligaPeso;
 
             if(probModelo > 90) probModelo = 90;
             if(probModelo < 5) probModelo = 5;
