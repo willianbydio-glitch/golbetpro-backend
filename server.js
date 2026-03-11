@@ -210,7 +210,7 @@ function godModeDetector(probModelo, odd, ev, traderScore){
 const BASE_URL = "https://v3.football.api-sports.io";
 const API_KEY = process.env.API_FOOTBALL_KEY;
 
-const app = express();
+
 
 /////////////////////////////////////////////////
 // CALCULO VALUE BET
