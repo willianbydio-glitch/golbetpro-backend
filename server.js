@@ -31,6 +31,25 @@ function ratingTime(nome){
 
 }
 
+function leagueStrength(leagueName){
+
+  const fortes = [
+    "Premier League",
+    "Champions League",
+    "La Liga",
+    "Serie A",
+    "Bundesliga"
+  ];
+
+  if(fortes.some(l => leagueName.includes(l))){
+    return 1.15;
+  }
+
+  return 1;
+}
+
+
+
 function probOdd(odd){
   return (1 / odd) * 100;
 }
@@ -1015,6 +1034,7 @@ app.get("/api/elite-trader", async (req, res) => {
           const oddOver25 = pegarOdd("Goals Over/Under", "Over 2.5");
           const oddBTTS = pegarOdd("Both Teams Score", "Yes");
           const sharp = detectarSharpMoney(oddsTracker[fixtureId]?.firstOdd,m.odd);
+          const ligaPeso = leagueStrength(game.league.name);probModelo = probModelo * ligaPeso;
           
           if (!oddHome && !oddOver25) return;
 
@@ -1100,9 +1120,10 @@ app.get("/api/elite-trader", async (req, res) => {
             const edge = prob - probImplicita;
             if(edge < -0.10) continue;
             const traderScore =
-              (ev * 0.45) +
-              ((probModelo/100) * 0.40) + 
-              (edge * 0.15);
+              (ev * 0.40) +
+              ((probModelo/100) * 0.35) +
+              (edge * 0.15) +
+              (diffRating * 0.01);
             
             // Filtros mais flexíveis
             if (ev < -0.10) continue;
