@@ -6,6 +6,31 @@ const calcularPoisson = require("./engine/poisonEngine");
 const oddsTracker = {};
 const teamHistoryCache = {};
 
+
+/////////////////////////////////////////////////
+// RATING SIMPLES DOS TIMES
+/////////////////////////////////////////////////
+
+function ratingTime(nome){
+
+  const fortes = [
+    "Flamengo","Palmeiras","Real Madrid","Barcelona",
+    "Manchester City","Bayern","PSG","Liverpool",
+    "Arsenal","Chelsea","Inter","Milan","Juventus"
+  ];
+
+  const medios = [
+    "Sevilla","Roma","Atletico","Napoli","Dortmund"
+  ];
+
+  if(fortes.some(t => nome.includes(t))) return 85;
+
+  if(medios.some(t => nome.includes(t))) return 75;
+
+  return 65;
+
+}
+
 function probOdd(odd){
   return (1 / odd) * 100;
 }
@@ -894,7 +919,14 @@ app.get("/api/elite-trader", async (req, res) => {
           const fixtureId = game.fixture.id;
           const homeId = game.teams.home.id;
           const awayId = game.teams.away.id;
-          
+
+          const homeName = game.teams.home.name;
+          const awayName = game.teams.away.name;
+
+          const ratingHome = ratingTime(homeName);
+          const ratingAway = ratingTime(awayName);
+
+          const diffRating = ratingHome - ratingAway;
           
           const oddsData = oddsDoDia[fixtureId];
           
@@ -987,7 +1019,12 @@ app.get("/api/elite-trader", async (req, res) => {
 
             if(!m.odd || m.odd <= 1) continue;
 
-            const probModelo = Number(m.prob);
+            let probModelo = Number(m.prob);
+            // ajuste força do time
+            probModelo += diffRating * 0.4;
+
+            if(probModelo > 90) probModelo = 90;
+            if(probModelo < 5) probModelo = 5;
             const analise = classificarAposta(probModelo, m.odd);
             const alertaSmart = smartMoneyDetector(probModelo, m.odd);
             const oddsMovimento = analyzeOddsMovement(game.fixture.id, m.nome, m.odd);
