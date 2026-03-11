@@ -86,13 +86,21 @@ app.get("/api/aposta-dia", async (req,res)=>{
 
   try{
 
-    const picks = await calcularEliteTrader();
+    const date = new Date().toISOString().split("T")[0];
 
-    if(!picks || picks.length===0){
+    const response = await fetch(
+      `http://localhost:${PORT}/api/elite-trader?date=${date}`
+    );
+
+    const data = await response.json();
+
+    if(!data.elitePicks || data.elitePicks.length === 0){
       return res.json({success:false});
     }
 
-    const melhor = picks.sort((a,b)=>b.traderScore-a.traderScore)[0];
+    const melhor = data.elitePicks.sort(
+      (a,b)=>b.traderScore-a.traderScore
+    )[0];
 
     res.json({
       success:true,
@@ -100,9 +108,7 @@ app.get("/api/aposta-dia", async (req,res)=>{
     });
 
   }catch(e){
-
     res.json({success:false});
-
   }
 
 });
@@ -1008,6 +1014,7 @@ app.get("/api/elite-trader", async (req, res) => {
           const oddAway = pegarOdd("Match Winner", "Away");
           const oddOver25 = pegarOdd("Goals Over/Under", "Over 2.5");
           const oddBTTS = pegarOdd("Both Teams Score", "Yes");
+          const sharp = detectarSharpMoney(oddsTracker[fixtureId]?.firstOdd,m.odd);
           
           if (!oddHome && !oddOver25) return;
 
