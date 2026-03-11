@@ -1040,7 +1040,7 @@ app.get("/api/elite-trader", async (req, res) => {
             
             // Filtros mais flexíveis
             if (ev < -0.10) continue;
-            if (m.odd < 1.10 || m.odd > 15.00) return;
+            if (m.odd < 1.10 || m.odd > 15.00) continue;
 
 
             
