@@ -1108,9 +1108,17 @@ app.get("/api/elite-trader", async (req, res) => {
             if(!m.odd || m.odd <= 1) continue;
 
             let probModelo = Number(m.prob);
-            // ajuste força do time
+            // força do time
             probModelo += diffRating * 0.08;
+            // força da liga
+            probModelo = probModelo * (1 + (ligaPeso - 1) * 0.3);
 
+            // filtro odds irreais
+            
+            if(m.odd > 10 && probModelo > 20) continue;
+
+            if(m.odd > 6 && probModelo > 35) continue;
+            
             probModelo = probModelo * (1 + (ligaPeso - 1) * 0.3);
 
             if(probModelo > 75) probModelo = 75;
@@ -1129,6 +1137,8 @@ app.get("/api/elite-trader", async (req, res) => {
               ((probModelo/100) * 0.35) +
               (edge * 0.15) +
               (diffRating * 0.01);
+
+            if(edge > 0.25) continue;
             
             // Filtros mais flexíveis
             if (ev < -0.10) continue;
