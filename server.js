@@ -1103,26 +1103,47 @@ app.get("/api/elite-trader", async (req, res) => {
             { nome: "BTTS", prob: elite.markets.btts, odd: oddBTTS }
           ];
 
-          for (let m of mercados) {
-
+          for (let m of mercados) { 
+            const mercadoResultado =
+              m.nome === "Home Win" ||
+              m.nome === "Away Win" ||
+              m.nome === "Draw";
+            
+            const mercadoGols =
+              m.nome.includes("Over") ||
+              m.nome.includes("Under") ||
+              m.nome.includes("BTTS");
+            
             if(!m.odd || m.odd <= 1) continue;
-
+            
             let probModelo = Number(m.prob);
-            // força do time
-            probModelo += diffRating * 0.08;
-            // força da liga
+
+  // ajuste força do time apenas para resultado
+            if(mercadoResultado){
+              if(m.nome === "Home Win"){
+                probModelo += diffRating * 0.08;
+              }
+              if(m.nome === "Away Win"){
+                probModelo -= diffRating * 0.08;
+              }
+            }
+
+  // bloqueio zebra absurda
+            if(mercadoResultado && m.nome === "Away Win" && diffRating > 12 && m.odd > 6){
+              continue;
+            }
+
+  // força da liga
             probModelo = probModelo * (1 + (ligaPeso - 1) * 0.3);
 
-            // filtro odds irreais
-            
+  // filtros odds irreais
             if(m.odd > 10 && probModelo > 20) continue;
-
             if(m.odd > 6 && probModelo > 35) continue;
-            
-            probModelo = probModelo * (1 + (ligaPeso - 1) * 0.3);
 
             if(probModelo > 75) probModelo = 75;
             if(probModelo < 10) probModelo = 10;
+
+  
             const analise = classificarAposta(probModelo, m.odd);
             const alertaSmart = smartMoneyDetector(probModelo, m.odd);
             const sharp = detectarSharpMoney(oddsTracker[fixtureId]?.firstOdd,m.odd);
