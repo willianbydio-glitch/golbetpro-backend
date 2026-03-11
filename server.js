@@ -1109,19 +1109,19 @@ app.get("/api/elite-trader", async (req, res) => {
 
             let probModelo = Number(m.prob);
             // ajuste força do time
-            probModelo += diffRating * 0.4;
+            probModelo += diffRating * 0.08;
 
-            probModelo = probModelo * ligaPeso;
+            probModelo = probModelo * (1 + (ligaPeso - 1) * 0.3);
 
-            if(probModelo > 90) probModelo = 90;
-            if(probModelo < 5) probModelo = 5;
+            if(probModelo > 75) probModelo = 75;
+            if(probModelo < 10) probModelo = 10;
             const analise = classificarAposta(probModelo, m.odd);
             const alertaSmart = smartMoneyDetector(probModelo, m.odd);
             const sharp = detectarSharpMoney(oddsTracker[fixtureId]?.firstOdd,m.odd);
             const oddsMovimento = analyzeOddsMovement(game.fixture.id, m.nome, m.odd);
             const probImplicita = 1 / m.odd;
             const prob = probModelo / 100;
-            const ev = (prob * m.odd) - 1;
+            const ev = ((prob * m.odd) - 1) * 100;
             const edge = prob - probImplicita;
             if(edge < -0.10) continue;
             const traderScore =
