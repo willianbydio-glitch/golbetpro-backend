@@ -1145,8 +1145,8 @@ app.get("/api/elite-trader", async (req, res) => {
             // bloqueio zebra absurda
             if(mercadoResultado &&
                m.nome === "Away Win" &&
-               diffRating > 10 &&
-               m.odd > 4
+               diffRating > 12 &&
+               m.odd > 6
             ){
               continue;
             }
@@ -1186,11 +1186,11 @@ app.get("/api/elite-trader", async (req, res) => {
             const ev = ((prob * m.odd) - 1) * 100;
             // EV máximo realista
             // limite EV irreal
-            if(ev > 40) continue;
+            if(ev > 80) continue;
             if(ev > 35) continue;
             
             const edge = prob - probImplicita;
-            if(edge < -0.10) continue;
+            if(edge < -0.15) continue;
             const traderScore =
               (ev * 0.40) +
               ((probModelo/100) * 0.35) +
@@ -1252,6 +1252,7 @@ app.get("/api/elite-trader", async (req, res) => {
             // evitar picks ruins
             if(probModelo < 15) continue;
             
+            console.log("PICK ENCONTRADA:", game.teams.home.name, "x", game.teams.away.name, m.nome);
             oportunidades.push({
               jogo: `${game.teams.home.name} x ${game.teams.away.name}`,
               liga: game.league.name,
