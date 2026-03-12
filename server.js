@@ -1122,6 +1122,7 @@ app.get("/api/elite-trader", async (req, res) => {
           ];
 
           for (let m of mercados) { 
+            let probModelo = Number(m.prob);
             const mercadoResultado =
               m.nome === "Home Win" ||
               m.nome === "Away Win" ||
@@ -1131,17 +1132,6 @@ app.get("/api/elite-trader", async (req, res) => {
               m.nome.includes("Over") ||
               m.nome.includes("Under") ||
               m.nome.includes("BTTS");
-
-            // separar tipo de mercado
-            const mercadoResultado =
-
-              m.nome === "Home Win" ||
-              m.nome === "Away Win";
-
-            const mercadoGols =
-              m.nome.includes("Over") ||
-              m.nome.includes("BTTS");
-
 
             // filtros específicos
 
@@ -1155,7 +1145,7 @@ app.get("/api/elite-trader", async (req, res) => {
             }
             if(!m.odd || m.odd <= 1) continue;
             
-            let probModelo = Number(m.prob);
+            
 
 
             const probMercado = (1 / m.odd) * 100;
