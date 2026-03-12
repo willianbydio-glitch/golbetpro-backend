@@ -1153,9 +1153,11 @@ app.get("/api/elite-trader", async (req, res) => {
             const probMercado = (1 / m.odd) * 100;
             // mistura modelo + mercado
 
-            probModelo = (probModelo * 0.90) + (probMercado * 0.10);
+            probModelo = (probModelo * 0.70) + (probMercado * 0.30);
 
-            console.log("ANALISANDO:", game.teams.home.name, "x", game.teams.away.name, m.nome, m.odd, probModelo);
+            if(probModelo > 40){
+              console.log("ANALISANDO:", game.teams.home.name, "x", game.teams.away.name, m.nome, m.odd, probModelo);
+            }
 
             // limites realistas
             if(probModelo > 75) probModelo = 75;
@@ -1198,16 +1200,12 @@ app.get("/api/elite-trader", async (req, res) => {
               continue;
             }
 
-            if(m.odd > 3){ 
+            if(m.odd > 4){
               probModelo *= 0.90;
             }
-            if(m.odd > 4){              
+            if(m.odd > 6){ 
               probModelo *= 0.75;
             }
-            if(m.odd > 6){
-              probModelo *= 0.55;
-            }
-
   // força da liga
             probModelo = probModelo * (1 + (ligaPeso - 1) * 0.5);
 
@@ -1216,7 +1214,7 @@ app.get("/api/elite-trader", async (req, res) => {
 
             if(m.odd > 10 && probModelo > 20) continue;
             if(m.odd > 6 && probModelo > 35) continue;
-            if(m.odd > 4 && probModelo > 50) continue;
+            if(m.odd > 6 && probModelo > 60) continue;
 
   
             const analise = classificarAposta(probModelo, m.odd);
@@ -1228,7 +1226,7 @@ app.get("/api/elite-trader", async (req, res) => {
             const ev = ((prob * m.odd) - 1) * 100;
             // EV máximo realista
             // limite EV irreal
-            if(ev > 35) continue;
+            if(ev > 120) continue;
             if(ev < -5) continue;
             
             const edge = prob - probImplicita;
