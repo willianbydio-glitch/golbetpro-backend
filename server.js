@@ -1324,6 +1324,16 @@ app.get("/api/elite-trader", async (req, res) => {
         if(oportunidades.length === 0){
 
           console.log("⚠️ Nenhuma aposta passou filtros — liberando fallback");
+          if(oportunidades.length === 0){
+  
+            console.log("⚠️ Nenhuma aposta passou filtros — liberando fallback");
+
+            return {  
+              success:true,  
+              total:0,  
+              elitePicks:[]
+            };
+          }
 
           const fallback = [];
 
