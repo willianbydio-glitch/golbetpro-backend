@@ -1133,15 +1133,17 @@ app.get("/api/elite-trader", async (req, res) => {
               m.nome.includes("Under") ||
               m.nome.includes("BTTS");
 
+
+
             // filtros específicos
 
             if(mercadoResultado){
-              if(m.odd > 4.5) continue;
-              if(probModelo < 25) continue;
+              if(m.odd > 6) continue;
+              if(probModelo < 20) continue;
             }
             if(mercadoGols){
-              if(m.odd > 3.5) continue;
-              if(probModelo < 40) continue;
+              if(m.odd > 4) continue;
+              if(probModelo < 35) continue;
             }
             if(!m.odd || m.odd <= 1) continue;
             
@@ -1152,9 +1154,8 @@ app.get("/api/elite-trader", async (req, res) => {
             // mistura modelo + mercado
 
             probModelo = (probModelo * 0.65) + (probMercado * 0.35);
-            // evitar probabilidade absurda
-            if(probModelo > 70) probModelo = 70;
-            if(probModelo < 8) probModelo = 8;
+
+            console.log("ANALISANDO:", game.teams.home.name, "x", game.teams.away.name, m.nome, m.odd, probModelo);
 
             // limites realistas
             if(probModelo > 75) probModelo = 75;
@@ -1193,17 +1194,11 @@ app.get("/api/elite-trader", async (req, res) => {
             probModelo = probModelo * (1 + (ligaPeso - 1) * 0.5);
 
   // filtros odds irreais
+            // filtro odds irreais
+
             if(m.odd > 10 && probModelo > 20) continue;
             if(m.odd > 6 && probModelo > 35) continue;
-
-            if(probModelo > 75) probModelo = 75;
-            if(probModelo < 10) probModelo = 10;
-            // filtro odds irreais
-            if(m.odd > 4 && probModelo > 35) continue;
-
-            if(m.odd > 6 && probModelo > 25) continue;
-
-            if(m.odd > 10 && probModelo > 15) continue;
+            if(m.odd > 4 && probModelo > 50) continue;
 
   
             const analise = classificarAposta(probModelo, m.odd);
@@ -1215,18 +1210,18 @@ app.get("/api/elite-trader", async (req, res) => {
             const ev = ((prob * m.odd) - 1) * 100;
             // EV máximo realista
             // limite EV irreal
-            if(ev > 40) continue;
+            if(ev > 80) continue;
             if(ev < -5) continue;
             
             const edge = prob - probImplicita;
-            if(edge < -0.15) continue;
+            if(edge < -0.25) continue;
             const traderScore =
               (ev * 0.50) +
               ((probModelo/100) * 0.25) +
               (edge * 0.20) +
               (diffRating * 0.01);
 
-            if(edge > 0.25) continue;
+            if(edge > 0.35) continue;
             
             // Filtros mais flexíveis
             if (ev < -0.10) continue;
@@ -1310,6 +1305,39 @@ app.get("/api/elite-trader", async (req, res) => {
         })),
 
         oportunidades.sort((a, b) => b.traderScore - a.traderScore);
+
+        if(oportunidades.length === 0){
+
+          console.log("⚠️ Nenhuma aposta passou filtros — liberando fallback");
+
+          const fallback = [];
+
+          for(let m of mercados){
+
+            if(!m.odd) continue;
+            const prob = Number(m.prob)/100;
+            const ev = (prob * m.odd - 1) * 100;
+            fallback.push({
+              jogo: `${homeName} x ${awayName}`,      
+              liga: game.league.name,      
+              mercado: m.nome,      
+              odd: m.odd,      
+              probModelo: (prob*100).toFixed(2),      
+              ev: ev.toFixed(2),      
+              edge: 0,     
+              traderScore: ev,      
+              rating: "Fallback",      
+              stakeRecomendada: "1%",    
+              risco: "Alto"    
+            }); 
+          }
+
+          fallback.sort((a,b)=>b.traderScore-a.traderScore);
+
+          if(fallback[0]){
+            oportunidades.push(fallback[0]);
+          }
+        }
 
         const top3IA = oportunidades.slice(0,3);
         return {
