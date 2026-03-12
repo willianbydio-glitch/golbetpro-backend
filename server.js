@@ -15,27 +15,34 @@ const app = express();
 
 function ratingTime(nome){
 
+  const elite = [
+    "Real Madrid","Manchester City","Bayern","Barcelona",
+    "Liverpool","PSG","Inter","Juventus","Arsenal","Chelsea"
+  ];
+
   const fortes = [
-    "Flamengo","Palmeiras","Real Madrid","Barcelona",
-    "Manchester City","Bayern","PSG","Liverpool",
-    "Arsenal","Chelsea","Inter","Milan","Juventus"
+    "Flamengo","Palmeiras","Atletico-MG","Corinthians",
+    "Napoli","Roma","Sevilla","Dortmund","Milan"
   ];
 
   const medios = [
-    "Sevilla","Roma","Atletico","Napoli","Dortmund"
+    "Internacional","Fluminense","Villarreal",
+    "Real Sociedad","Lazio"
   ];
 
-  if(fortes.some(t => nome.includes(t))) return 85;
+  if(elite.some(t => nome.includes(t))) return 90;
+
+  if(fortes.some(t => nome.includes(t))) return 82;
 
   if(medios.some(t => nome.includes(t))) return 75;
 
-  return 65;
+  return 68;
 
 }
 
 function leagueStrength(leagueName){
 
-  const fortes = [
+  const top = [
     "Premier League",
     "Champions League",
     "La Liga",
@@ -43,11 +50,22 @@ function leagueStrength(leagueName){
     "Bundesliga"
   ];
 
-  if(fortes.some(l => leagueName.includes(l))){
+  const media = [
+    "Brasileirão",
+    "Liga Profesional",
+    "MLS"
+  ];
+
+  if(top.some(l => leagueName.includes(l))){
     return 1.15;
   }
 
+  if(media.some(l => leagueName.includes(l))){
+    return 1.07;
+  }
+
   return 1;
+
 }
 
 
@@ -119,9 +137,9 @@ app.get("/api/aposta-dia", async (req,res)=>{
       return res.json({success:false});
     }
 
-    const melhor = data.elitePicks.sort(
-      (a,b)=>b.traderScore-a.traderScore
-    )[0];
+    const melhor = data.elitePicks
+      .filter(p => p.ev > 12)
+      .sort((a,b)=>b.traderScore-a.traderScore)[0];
 
     res.json({
       success:true,
@@ -1113,7 +1131,28 @@ app.get("/api/elite-trader", async (req, res) => {
               m.nome.includes("Over") ||
               m.nome.includes("Under") ||
               m.nome.includes("BTTS");
-            
+
+            // separar tipo de mercado
+            const mercadoResultado =
+
+              m.nome === "Home Win" ||
+              m.nome === "Away Win";
+
+            const mercadoGols =
+              m.nome.includes("Over") ||
+              m.nome.includes("BTTS");
+
+
+            // filtros específicos
+
+            if(mercadoResultado){
+              if(m.odd > 4.5) continue;
+              if(probModelo < 25) continue;
+            }
+            if(mercadoGols){
+              if(m.odd > 3.5) continue;
+              if(probModelo < 40) continue;
+            }
             if(!m.odd || m.odd <= 1) continue;
             
             let probModelo = Number(m.prob);
@@ -1122,7 +1161,7 @@ app.get("/api/elite-trader", async (req, res) => {
             const probMercado = (1 / m.odd) * 100;
             // mistura modelo + mercado
 
-            probModelo = (probModelo * 0.6) + (probMercado * 0.4);
+            probModelo = (probModelo * 0.65) + (probMercado * 0.35);
             // evitar probabilidade absurda
             if(probModelo > 70) probModelo = 70;
             if(probModelo < 8) probModelo = 8;
@@ -1186,15 +1225,15 @@ app.get("/api/elite-trader", async (req, res) => {
             const ev = ((prob * m.odd) - 1) * 100;
             // EV máximo realista
             // limite EV irreal
-            if(ev > 80) continue;
-            if(ev > 35) continue;
+            if(ev > 40) continue;
+            if(ev < -5) continue;
             
             const edge = prob - probImplicita;
             if(edge < -0.15) continue;
             const traderScore =
-              (ev * 0.40) +
-              ((probModelo/100) * 0.35) +
-              (edge * 0.15) +
+              (ev * 0.50) +
+              ((probModelo/100) * 0.25) +
+              (edge * 0.20) +
               (diffRating * 0.01);
 
             if(edge > 0.25) continue;
@@ -1252,6 +1291,9 @@ app.get("/api/elite-trader", async (req, res) => {
             // evitar picks ruins
             if(probModelo < 15) continue;
             
+            if(oportunidades.filter(o => o.jogo === `${game.teams.home.name} x ${game.teams.away.name}`).length >= 1){
+              continue;
+            }
             console.log("PICK ENCONTRADA:", game.teams.home.name, "x", game.teams.away.name, m.nome);
             oportunidades.push({
               jogo: `${game.teams.home.name} x ${game.teams.away.name}`,
