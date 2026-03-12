@@ -1153,7 +1153,7 @@ app.get("/api/elite-trader", async (req, res) => {
             const probMercado = (1 / m.odd) * 100;
             // mistura modelo + mercado
 
-            probModelo = (probModelo * 0.50) + (probMercado * 0.50);
+            probModelo = (probModelo * 0.90) + (probMercado * 0.10);
 
             console.log("ANALISANDO:", game.teams.home.name, "x", game.teams.away.name, m.nome, m.odd, probModelo);
 
@@ -1164,10 +1164,10 @@ app.get("/api/elite-trader", async (req, res) => {
   // ajuste força do time apenas para resultado
             if(mercadoResultado){
               if(m.nome === "Home Win"){
-                probModelo += diffRating * 0.15;
+                probModelo += diffRating * 0.06;
               }
               if(m.nome === "Away Win"){
-                probModelo -= diffRating * 0.12;
+                probModelo -= diffRating * 0.06;
               }
             }
 
@@ -1198,11 +1198,14 @@ app.get("/api/elite-trader", async (req, res) => {
               continue;
             }
 
-            if(m.odd > 4){ 
-              probModelo *= 0.85;
+            if(m.odd > 3){ 
+              probModelo *= 0.90;
             }
-            if(m.odd > 6){              
+            if(m.odd > 4){              
               probModelo *= 0.75;
+            }
+            if(m.odd > 6){
+              probModelo *= 0.55;
             }
 
   // força da liga
@@ -1225,7 +1228,7 @@ app.get("/api/elite-trader", async (req, res) => {
             const ev = ((prob * m.odd) - 1) * 100;
             // EV máximo realista
             // limite EV irreal
-            if(ev > 80) continue;
+            if(ev > 35) continue;
             if(ev < -5) continue;
             
             const edge = prob - probImplicita;
@@ -1289,7 +1292,7 @@ app.get("/api/elite-trader", async (req, res) => {
             }
 
             // evitar picks ruins
-            if(probModelo < 15) continue;
+            if(probModelo < 18) continue;
             
             if(oportunidades.filter(o => o.jogo === `${game.teams.home.name} x ${game.teams.away.name}`).length >= 1){
               continue;
