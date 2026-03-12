@@ -1322,47 +1322,8 @@ app.get("/api/elite-trader", async (req, res) => {
 
         oportunidades.sort((a, b) => b.traderScore - a.traderScore);
 
-        if(oportunidades.length === 0){
-
-          console.log("⚠️ Nenhuma aposta passou filtros — liberando fallback");
-          if(oportunidades.length === 0){
-  
-            console.log("⚠️ Nenhuma aposta passou filtros — liberando fallback");
-
-            return {  
-              success:true,  
-              total:0,  
-              elitePicks:[]
-            };
-          }
-
-          const fallback = [];
-
-          for(let m of mercados){
-
-            if(!m.odd) continue;
-            const prob = Number(m.prob)/100;
-            const ev = (prob * m.odd - 1) * 100;
-            fallback.push({
-              jogo: `${homeName} x ${awayName}`,      
-              liga: game.league.name,      
-              mercado: m.nome,      
-              odd: m.odd,      
-              probModelo: (prob*100).toFixed(2),      
-              ev: ev.toFixed(2),      
-              edge: 0,     
-              traderScore: ev,      
-              rating: "Fallback",      
-              stakeRecomendada: "1%",    
-              risco: "Alto"    
-            }); 
-          }
-
-          fallback.sort((a,b)=>b.traderScore-a.traderScore);
-
-          if(fallback[0]){
-            oportunidades.push(fallback[0]);
-          }
+        if(oportunidades.length === 0){  
+          console.log("⚠️ Nenhuma aposta passou filtros");
         }
 
         const top3IA = oportunidades.slice(0,3);
