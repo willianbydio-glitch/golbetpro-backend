@@ -1153,7 +1153,7 @@ app.get("/api/elite-trader", async (req, res) => {
             const probMercado = (1 / m.odd) * 100;
             // mistura modelo + mercado
 
-            probModelo = (probModelo * 0.65) + (probMercado * 0.35);
+            probModelo = (probModelo * 0.50) + (probMercado * 0.50);
 
             console.log("ANALISANDO:", game.teams.home.name, "x", game.teams.away.name, m.nome, m.odd, probModelo);
 
@@ -1164,10 +1164,10 @@ app.get("/api/elite-trader", async (req, res) => {
   // ajuste força do time apenas para resultado
             if(mercadoResultado){
               if(m.nome === "Home Win"){
-                probModelo += diffRating * 0.08;
+                probModelo += diffRating * 0.15;
               }
               if(m.nome === "Away Win"){
-                probModelo -= diffRating * 0.08;
+                probModelo -= diffRating * 0.12;
               }
             }
 
@@ -1180,6 +1180,14 @@ app.get("/api/elite-trader", async (req, res) => {
             ){
               continue;
             }
+            // bloquear underdog improvável
+            if(mercadoResultado &&
+               m.nome === "Away Win" &&
+               diffRating > 8 &&  
+               probModelo < probMercado
+            ){
+              continue;
+            }
 
             // favorito não pode ter odd absurda
             if(mercadoResultado &&
@@ -1188,6 +1196,13 @@ app.get("/api/elite-trader", async (req, res) => {
                m.odd > 3.5
             ){
               continue;
+            }
+
+            if(m.odd > 4){ 
+              probModelo *= 0.85;
+            }
+            if(m.odd > 6){              
+              probModelo *= 0.75;
             }
 
   // força da liga
