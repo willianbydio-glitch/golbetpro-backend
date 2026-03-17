@@ -1166,11 +1166,19 @@ app.get("/api/elite-trader", async (req, res) => {
   // ajuste força do time apenas para resultado
             if(mercadoResultado){
               if(m.nome === "Home Win"){
-                probModelo += diffRating * 0.06;
+                probModelo += diffRating * 0.10;
               }
               if(m.nome === "Away Win"){
-                probModelo -= diffRating * 0.06;
+                probModelo -= diffRating * 0.10;
               }
+            }
+
+            if(
+              mercadoResultado &&
+              m.nome === "Home Win" &&
+              diffRating < -5
+            ){
+              continue;
             }
 
   // bloqueio zebra absurda
@@ -1183,10 +1191,11 @@ app.get("/api/elite-trader", async (req, res) => {
               continue;
             }
             // bloquear underdog improvável
-            if(mercadoResultado &&
-               m.nome === "Away Win" &&
-               diffRating > 8 &&  
-               probModelo < probMercado
+            if(
+              mercadoResultado &&
+              m.nome === "Away Win" &&
+              diffRating > 8 &&
+              m.odd > 3.5
             ){
               continue;
             }
@@ -1212,9 +1221,11 @@ app.get("/api/elite-trader", async (req, res) => {
   // filtros odds irreais
             // filtro odds irreais
 
-            if(m.odd > 10 && probModelo > 20) continue;
-            if(m.odd > 6 && probModelo > 35) continue;
-            if(m.odd > 6 && probModelo > 60) continue;
+            if(m.odd > 5 && probModelo < 40) continue;
+
+            if(m.odd > 4 && probModelo < 45){
+              continue;
+            }
 
   
             const analise = classificarAposta(probModelo, m.odd);
