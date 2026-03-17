@@ -1055,6 +1055,10 @@ app.get("/api/elite-trader", async (req, res) => {
           const oddBTTS = pegarOdd("Both Teams Score", "Yes");
           
           const ligaPeso = leagueStrength(game.league.name);
+         let favorito = null;
+          if(oddHome && oddAway){
+            favorito = oddHome < oddAway ? "Home" : "Away";
+          } 
           
           if (!oddHome && !oddOver25) return;
 
@@ -1114,6 +1118,13 @@ app.get("/api/elite-trader", async (req, res) => {
           // ANALISAR MERCADOS
           //////////////////////////////////////////////////
 
+          // ignorar jogo equilibrado (sem favorito claro)
+
+          if(oddHome > 2.2 && oddAway > 2.2){
+            return;
+          }
+          
+          
           const mercados = [
             { nome: "Home Win", prob: elite.probability.homeWin, odd: oddHome },
             { nome: "Away Win", prob: elite.probability.awayWin, odd: oddAway },
@@ -1122,6 +1133,15 @@ app.get("/api/elite-trader", async (req, res) => {
           ];
 
           for (let m of mercados) { 
+            
+            // BLOQUEAR ZEBRA FORTE
+            if(favorito === "Home" && m.nome === "Away Win" && m.odd > 3.2){
+              continue;
+            }
+
+            if(favorito === "Away" && m.nome === "Home Win" && m.odd > 3.2){
+              continue;
+            }
             let probModelo = Number(m.prob);
             const mercadoResultado =
               m.nome === "Home Win" ||
@@ -1155,8 +1175,25 @@ app.get("/api/elite-trader", async (req, res) => {
 
             probModelo = (probModelo * 0.70) + (probMercado * 0.30);
 
+            // BOOST NO FAVORITO
+            if(favorito === "Home" && m.nome === "Home Win"){
+              probModelo += 6;
+            }
+
+            if(favorito === "Away" && m.nome === "Away Win"){
+              probModelo += 6;
+            }
+
             if(probModelo > 40){
               console.log("ANALISANDO:", game.teams.home.name, "x", game.teams.away.name, m.nome, m.odd, probModelo);
+            }
+
+            // SUPER FAVORITO (odd baixa)
+            if(
+              (m.nome === "Home Win" && m.odd <= 1.70) ||
+              (m.nome === "Away Win" && m.odd <= 1.70)
+            ){
+              probModelo += 8;
             }
 
             // limites realistas
@@ -1191,11 +1228,11 @@ app.get("/api/elite-trader", async (req, res) => {
               continue;
             }
             // bloquear underdog improvável
+            // bloquear zebra baseada em força real
             if(
               mercadoResultado &&
               m.nome === "Away Win" &&
-              diffRating > 8 &&
-              m.odd > 3.5
+              diffRating > 5
             ){
               continue;
             }
@@ -1209,24 +1246,15 @@ app.get("/api/elite-trader", async (req, res) => {
               continue;
             }
 
-            if(m.odd > 4){
-              probModelo *= 0.90;
-            }
-            if(m.odd > 6){ 
-              probModelo *= 0.75;
-            }
+          
   // força da liga
             probModelo = probModelo * (1 + (ligaPeso - 1) * 0.5);
 
-  // filtros odds irreais
-            // filtro odds irreais
 
-            if(m.odd > 5 && probModelo < 40) continue;
+            // BLOQUEIO SIMPLES E EFETIVO
+            if(m.odd > 4.5) continue;
 
-            if(m.odd > 4 && probModelo < 45){
-              continue;
-            }
-
+            
   
             const analise = classificarAposta(probModelo, m.odd);
             const alertaSmart = smartMoneyDetector(probModelo, m.odd);
